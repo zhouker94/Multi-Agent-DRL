@@ -11,16 +11,16 @@ class DqnAgent(object):
     def __init__(self, name, learning=False):
         self._name = name
 
-        self.epsilon = const.EPSILON_INIT
-        self.learning = learning
+        self._epsilon = const.EPSILON_INIT
+        self._learning = learning
 
         self._input_x = tf.placeholder(tf.float32,
                                        [None, const.STATE_SPACE])
         self._input_y = tf.placeholder(tf.float32,
                                        [None, const.ACTION_SPACE])
-        self.target_q = q_network.QNetwork(scope=const.TARGET_Q_SCOPE,
+        self._target_q = q_network.QNetwork(scope=const.TARGET_Q_SCOPE,
                                            inputs=(self._input_x, self._input_y))
-        self.online_q = q_network.QNetwork(scope=const.ONLINE_Q_SCOPE,
+        self._online_q = q_network.QNetwork(scope=const.ONLINE_Q_SCOPE,
                                            inputs=(self._input_x, self._input_y))
 
         self.target_q.define_graph()
@@ -39,12 +39,12 @@ class DqnAgent(object):
         self.sess.run(init_op)
 
     def choose_action(self, state):
-        if not self.epsilon <= const.EPSILON_MIN:
-            self.epsilon *= const.EPSILON_DECAY
+        if not self._epsilon <= const.EPSILON_MIN:
+            self._epsilon *= const.EPSILON_DECAY
 
         q_values = self.sess.run(self.online_q.outputs[const.Q_VALUE_OUTPUT],
                                  feed_dict={self._input_x: state})
-        if random.random() <= self.epsilon:
+        if random.random() <= self._epsilon:
             return random.randint(0, const.ACTION_SPACE - 1)
         else:
             actions = self.sess.run(tf.argmax(q_values))
@@ -52,9 +52,11 @@ class DqnAgent(object):
 
     def update_online_q(self):
         transitions = list(self.replay_buffer.dequeue())
-        print(transitions)
+        # for state, action, reward, next_state, done in trainsistions:
+            # target = 
         # TODO: training Step
-        # self.sess.run(self.online_q.outputs[const.ADAM_OPTIMIZER], feed_dict=)
+        self.sess.run(self.online_q.outputs[const.ADAM_OPTIMIZER], 
+                feed_dict={self._input_x:transitions, self._input_y:})
         pass
 
     def update_target_q(self):
@@ -74,3 +76,4 @@ class DqnAgent(object):
     def __exit__(self):
         self.save_model()
         self.sess.close()
+
