@@ -34,10 +34,10 @@ def main(agrv):
 
         for time in range(const.MAX_STEP):
             action = dqn_agent.choose_action(state)
-            print(action)
             next_state, reward, done, _ = env.step(action)
             reward = reward if not done else -10
             next_state = np.reshape(next_state, [1, const.STATE_SPACE])
+            # print(state, action, reward, next_state, done)
             dqn_agent.store_experience(state, action, reward, next_state, done)
             state = next_state
             if done:

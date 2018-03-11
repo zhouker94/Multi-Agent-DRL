@@ -1,6 +1,7 @@
 import os
 import random
 
+import numpy as np
 import tensorflow as tf
 import constants as const
 import q_network
@@ -11,20 +12,21 @@ class DqnAgent(object):
     def __init__(self, name, learning=False):
         self._name = name
 
-        self._epsilon = const.EPSILON_INIT
+        self.epsilon = const.EPSILON_INIT
+        self.gamma = const.GAMMA
         self._learning = learning
 
         self._input_x = tf.placeholder(tf.float32,
-                                       [None, const.STATE_SPACE])
+                                       shape=[None, const.STATE_SPACE])
         self._input_y = tf.placeholder(tf.float32,
-                                       [None, const.ACTION_SPACE])
+                                       shape=[None, const.ACTION_SPACE])
         self._target_q = q_network.QNetwork(scope=const.TARGET_Q_SCOPE,
                                            inputs=(self._input_x, self._input_y))
         self._online_q = q_network.QNetwork(scope=const.ONLINE_Q_SCOPE,
                                            inputs=(self._input_x, self._input_y))
 
-        self.target_q.define_graph()
-        self.online_q.define_graph()
+        self._target_q.define_graph()
+        self._online_q.define_graph()
 
         # The agent should hold a tf session
         self.sess = tf.Session()
@@ -39,32 +41,39 @@ class DqnAgent(object):
         self.sess.run(init_op)
 
     def choose_action(self, state):
-        if not self._epsilon <= const.EPSILON_MIN:
-            self._epsilon *= const.EPSILON_DECAY
-
-        q_values = self.sess.run(self.online_q.outputs[const.Q_VALUE_OUTPUT],
+        if not self.epsilon <= const.EPSILON_MIN:
+            self.epsilon *= const.EPSILON_DECAY
+        
+        q_values = self.sess.run(self._online_q.outputs[const.Q_VALUE_OUTPUT],
                                  feed_dict={self._input_x: state})
-        if random.random() <= self._epsilon:
+        if random.random() <= self.epsilon:
             return random.randint(0, const.ACTION_SPACE - 1)
         else:
             actions = self.sess.run(tf.argmax(q_values))
             return random.choice(actions)
 
     def update_online_q(self):
-        transitions = list(self.replay_buffer.dequeue())
-        # for state, action, reward, next_state, done in trainsistions:
-            # target = 
+        transitions = self.replay_buffer.dequeue()
+        states = transitions[0]
+        print("states", states.shape)
+        targets = transitions[1]
+        print("targets", targets.shape)
         # TODO: training Step
-        self.sess.run(self.online_q.outputs[const.ADAM_OPTIMIZER], 
-                feed_dict={self._input_x:transitions, self._input_y:})
+        self.sess.run(self._online_q.outputs[const.ADAM_OPTIMIZER], 
+                      feed_dict={self._input_x:states, self._input_y:targets})
         pass
 
     def update_target_q(self):
         pass
 
     def store_experience(self, state, action, reward, next_state, done):
-        print(state.dtype, action, reward, next_state.dtype, done)
-        self.replay_buffer.enqueue((state, action, reward, next_state, done))
+        target = reward
+        if not done:
+            q_values = self.sess.run(self._target_q.outputs[const.Q_VALUE_OUTPUT],
+                                     feed_dict={self._input_x: next_state})
+            target = reward + self.gamma * np.ndarray.max(q_values)
+        
+        self.replay_buffer.enqueue([state, target])
 
     def load(self, name):
         pass

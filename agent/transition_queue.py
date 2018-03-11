@@ -14,19 +14,17 @@ class TransitionQueue(object):
         self.length = 0
         self.tq = tf.RandomShuffleQueue(const.REPLAY_BUFFER_LENGTH,
                                         const.MIN_TRANSITIONS_IN_BUFFER,
-                                        dtypes=[tf.float32, tf.int32, tf.float32, tf.float32, tf.bool],
-                                        shapes=[(1, const.STATE_SPACE), (), (), (1, const.STATE_SPACE), ()])
+                                        dtypes=[tf.float32, tf.float32],
+                                        shapes=[(const.STATE_SPACE), ()])
         self.sess = sess
+        
+        self.state = tf.placeholder(dtype=tf.float32, 
+                                    shape=(const.STATE_SPACE))
+        self.target = tf.placeholder(dtype=tf.float32,
+                                     shape=())
 
-        self.state = tf.placeholder(tf.float32, shape=(1, const.STATE_SPACE))
-        self.action = tf.placeholder(tf.int32)
-        self.reward = tf.placeholder(tf.float32)
-        self.next_state = tf.placeholder(tf.float32, shape=(1, const.STATE_SPACE))
-        self.done = tf.placeholder(tf.bool)
-
-        self.tq_enqueue_op = self.tq.enqueue([self.state, self.action, self.reward, self.next_state, self.done],
+        self.tq_enqueue_op = self.tq.enqueue([self.state, self.target],
                                              name=const.TRANSITION_QUQUE_ENQUEUE_NAME)
-
         self.tq_dequeue_op = self.tq.dequeue_many(const.MINI_BATCH_SIZE,
                                                   name=const.TRANSITION_QUQUE_DEQUEUE_NAME)
 
@@ -34,13 +32,11 @@ class TransitionQueue(object):
 
     def enqueue(self, val):
         self.sess.run(self.tq_enqueue_op, feed_dict={self.state: val[0],
-                                                     self.action: val[1],
-                                                     self.reward: val[2],
-                                                     self.next_state: val[3],
-                                                     self.done: val[4]})
+                                                     self.target: val[1]})
 
     def dequeue(self):
         return self.sess.run(self.tq_dequeue_op)
 
     def get_size(self):
         return self.sess.run(self.tq_get_size_op)
+
