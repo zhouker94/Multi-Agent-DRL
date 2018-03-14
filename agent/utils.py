@@ -43,3 +43,4 @@ class Utils(object):
         initializer = tf.random_normal_initializer(normal_mean,
                                                    std_dev)
         return Utils.create_variable(name, scope, shape, dtype, initializer)
+

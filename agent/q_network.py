@@ -1,10 +1,10 @@
 import tensorflow as tf
 import constants as const
 from utils import Utils
-import tf_graph as tfg
+import tf_sub_graph as tsg
 
 
-class QNetwork(tfg.TFGraph):
+class QNetwork(tsg.TFSubGraph):
     def __init__(self, scope, inputs):
         super(QNetwork, self).__init__(scope, inputs)
 
@@ -25,7 +25,6 @@ class QNetwork(tfg.TFGraph):
         curr_inputs = self.inputs[0]
 
         for i in range(const.Q_NETWORK_FULLCONN_NUM):
-            print(const.Q_NETWORK_WEIGHT_SHAPE[0], '!!!!!!!')
             self.outputs[const.FULLCONN_OUTPUT + str(i)] = \
                 tf.matmul(curr_inputs, self.fullconn_weight[i]) + self.fullconn_bias[i]
             # if is not output layer
@@ -37,6 +36,11 @@ class QNetwork(tfg.TFGraph):
                 curr_inputs = self.outputs[const.FULLCONN_OUTPUT + str(i)]
 
         self.outputs[const.Q_VALUE_OUTPUT] = tf.nn.softmax(curr_inputs)
+        self.outputs[const.MAX_Q_OUTPUT] = tf.reduce_max(self.outputs[const.Q_VALUE_OUTPUT],
+                                                         axis=1)
+        self.outputs[const.ACTION_OUTPUT] = \
+            tf.argmax(self.outputs[const.Q_VALUE_OUTPUT])
+        
         self.outputs[const.CROSS_ENTROPY_LOSS] = \
             tf.nn.softmax_cross_entropy_with_logits(
                 labels=self.inputs[1],
@@ -45,8 +49,10 @@ class QNetwork(tfg.TFGraph):
         self.outputs[const.ADAM_OPTIMIZER] = \
             tf.train.AdamOptimizer(1e-4).minimize(self.outputs[const.CROSS_ENTROPY_LOSS])
 
+
     def fit(self, batch_x, batch_y):
         pass
 
     def predict(self, batch_x):
         pass
+

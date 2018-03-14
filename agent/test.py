@@ -31,6 +31,8 @@ def main(agrv):
         # env.render()
         state = env.reset()
         state = np.reshape(state, [1, const.STATE_SPACE])
+        
+        C = 0
 
         for time in range(const.MAX_STEP):
             action = dqn_agent.choose_action(state)
@@ -40,6 +42,12 @@ def main(agrv):
             # print(state, action, reward, next_state, done)
             dqn_agent.store_experience(state, action, reward, next_state, done)
             state = next_state
+            
+            if C >= const.COPY_STEP:
+                dqn_agent.update_target_q()
+                C = 0
+            C += 1
+
             if done:
                 print("episode: {}/{}, score: {}, e: {:.2}"
                       .format(e, const.TRAINING_EPISODES, time, dqn_agent.epsilon))

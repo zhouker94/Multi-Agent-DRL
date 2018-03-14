@@ -30,7 +30,7 @@ class DqnAgent(object):
 
         # The agent should hold a tf session
         self.sess = tf.Session()
-        self.replay_buffer = tq.TransitionQueue(self.sess)
+        self.memory = np.zeros((const.memory_size, n_features*2+2))
 
         self.saver = tf.train.Saver()
         # train_writer = tf.summary.FileWriter(const.LOG_PATH, sess.graph)
@@ -44,36 +44,50 @@ class DqnAgent(object):
         if not self.epsilon <= const.EPSILON_MIN:
             self.epsilon *= const.EPSILON_DECAY
         
-        q_values = self.sess.run(self._online_q.outputs[const.Q_VALUE_OUTPUT],
+        actions = self.sess.run(self._online_q.outputs[const.ACTION_OUTPUT],
                                  feed_dict={self._input_x: state})
+        
         if random.random() <= self.epsilon:
             return random.randint(0, const.ACTION_SPACE - 1)
         else:
-            actions = self.sess.run(tf.argmax(q_values))
             return random.choice(actions)
 
     def update_online_q(self):
         transitions = self.replay_buffer.dequeue()
         states = transitions[0]
-        print("states", states.shape)
         targets = transitions[1]
-        print("targets", targets.shape)
+        
         # TODO: training Step
+        map_state_op = tf.map_fn(lambda x: tf.reshape(x, [const.STATE_SPACE]), states)
+        stack_state_op = tf.stack(map_state_op)
+        batch_x = self.sess.run(stack_state_op)
+
+        map_targets_op = tf.map_fn(lambda y: tf.reshape(y, [const.ACTION_SPACE]), targets)
+        statck_targets_op = tf.stack(map_targets_op)
+        batch_y = self.sess.run(statck_targets_op)
+        
         self.sess.run(self._online_q.outputs[const.ADAM_OPTIMIZER], 
-                      feed_dict={self._input_x:states, self._input_y:targets})
+                      feed_dict={self._input_x: batch_x, self._input_y: batch_y})
         pass
 
     def update_target_q(self):
-        pass
+        weights = zip(self._online_q.fullconn_weight, self._target_q.fullconn_weight)
+        for weight in weights:
+            self.sess.run(tf.assign(*weight))
+        biases = zip(self._online_q.fullconn_bias, self._target_q.fullconn_bias)
+        for bias in biases:
+            self.sess.run(tf.assign(*bias))
 
     def store_experience(self, state, action, reward, next_state, done):
-        target = reward
-        if not done:
-            q_values = self.sess.run(self._target_q.outputs[const.Q_VALUE_OUTPUT],
+        targets = self.sess.run(self._online_q.outputs[const.Q_VALUE_OUTPUT],
+                                feed_dict={self._input_x: state})
+        next_max_q = self.sess.run(self._target_q.outputs[const.MAX_Q_OUTPUT],
                                      feed_dict={self._input_x: next_state})
-            target = reward + self.gamma * np.ndarray.max(q_values)
+        targets[0][action] = reward
+        if not done:
+            targets[0][action] = reward + self.gamma * next_max_q
         
-        self.replay_buffer.enqueue([state, target])
+        self.replay_buffer.enqueue([state, targets])
 
     def load(self, name):
         pass
