@@ -30,7 +30,7 @@ class DqnAgent(object):
 
         # The agent should hold a tf session
         self.sess = tf.Session()
-        self.memory = np.zeros((const.memory_size, n_features*2+2))
+        self.memory = np.zeros((const.MEMORY_SIZE, n_features*2+2))
 
         self.saver = tf.train.Saver()
         # train_writer = tf.summary.FileWriter(const.LOG_PATH, sess.graph)
