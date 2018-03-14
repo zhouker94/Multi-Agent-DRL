@@ -11,9 +11,6 @@ import sys
 import agent
 import numpy as np
 import constants as const
-import tensorflow as tf
-import q_network
-import os
 
 
 def main(agrv):
@@ -31,7 +28,7 @@ def main(agrv):
         # env.render()
         state = env.reset()
         state = np.reshape(state, [1, const.STATE_SPACE])
-        
+
         C = 0
 
         for time in range(const.MAX_STEP):
@@ -42,7 +39,7 @@ def main(agrv):
             # print(state, action, reward, next_state, done)
             dqn_agent.store_experience(state, action, reward, next_state, done)
             state = next_state
-            
+
             if C >= const.COPY_STEP:
                 dqn_agent.update_target_q()
                 C = 0
@@ -53,8 +50,8 @@ def main(agrv):
                       .format(e, const.TRAINING_EPISODES, time, dqn_agent.epsilon))
                 break
 
-        if dqn_agent.replay_buffer.get_size() > const.MINI_BATCH_SIZE:
-            dqn_agent.update_online_q()
+        if dqn_agent.memory.get_size() > const.MINI_BATCH_SIZE:
+            dqn_agent.learn()
 
 
 if __name__ == '__main__':

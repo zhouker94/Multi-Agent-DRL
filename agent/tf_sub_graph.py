@@ -16,9 +16,9 @@ class TFSubGraph(object):
         self.outputs = {}
 
     def define_graph(self):
-        self.create_variables()
         with tf.variable_scope(self.scope):
-            self.implement_graph()
+            self.create_variables()
+        self.implement_graph()
 
     def create_variables(self):
         pass
