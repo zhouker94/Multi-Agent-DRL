@@ -15,7 +15,7 @@ class DqnAgent(object):
         self.gamma = const.GAMMA
         self._learning_rate = learning_rate
 
-        self.memory = []
+        self._memory = []
         self._memory_counter = 0
 
         self._input_x = tf.placeholder(tf.float32,
@@ -58,9 +58,17 @@ class DqnAgent(object):
             return np.random.randint(0, const.ACTION_SPACE - 1)
 
     def learn(self):
-        transitions = self.memory.dequeue()
-        states = transitions[0]
-        targets = transitions[1]
+        # check to replace target parameters
+        if self.learn_step_counter % self.replace_target_iter == 0:
+            self.sess.run(self.replace_target_op)
+            print('\ntarget_params_replaced\n')
+
+        # sample batch memory from all memory
+        if self.memory_counter > self.memory_size:
+            sample_index = np.random.choice(self.memory_size, size=self.batch_size)
+        else:
+            sample_index = np.random.choice(self.memory_counter, size=self.batch_size)
+        batch_memory = self.memory[sample_index, :]
 
         # TODO: training Step
         map_state_op = tf.map_fn(lambda x: tf.reshape(x, [const.STATE_SPACE]), states)
@@ -68,8 +76,8 @@ class DqnAgent(object):
         batch_x = self.sess.run(stack_state_op)
 
         map_targets_op = tf.map_fn(lambda y: tf.reshape(y, [const.ACTION_SPACE]), targets)
-        statck_targets_op = tf.stack(map_targets_op)
-        batch_y = self.sess.run(statck_targets_op)
+        stack_targets_op = tf.stack(map_targets_op)
+        batch_y = self.sess.run(stack_targets_op)
 
         self.sess.run(self._online_q.outputs[const.ADAM_OPTIMIZER],
                       feed_dict={self._input_x: batch_x, self._input_y: batch_y})
@@ -84,10 +92,10 @@ class DqnAgent(object):
             self.sess.run(tf.assign(*bias))
 
     def store_experience(self, state, action, reward, next_state, done):
-        transition = self.memory.append((state, action, reward, next_state, done))
+        transition = np.hstack((state, action, reward, next_state, done))
         # replace the old memory with new memory
-        index = self._memory_counter % const.MEMORY_SIZE
-        self.memory[index :] = transition
+        self._memory_counter %= const.MEMORY_SIZE
+        self._memory[self._memory_counter, :] = transition
         self._memory_counter += 1
 
     def load(self, name):
