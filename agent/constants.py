@@ -13,9 +13,9 @@ MEMORY_SIZE = 5000
 ACTION_SPACE = 0
 STATE_SPACE = 0
 
-COPY_STEP = 5
+COPY_STEP = 20
 
-TRAINING_EPISODES = 5000
+TRAINING_EPISODES = 1000
 MINI_BATCH_SIZE = 64
 
 TARGET_Q_SCOPE = 'target_q'
@@ -26,21 +26,9 @@ ONLINE_Q_COLLECTION = 'online_q_collection'
 Q_NETWORK_FULLCONN_NUM = 3
 Q_NETWORK_WEIGHT_NAME = 'fullconn_weight_'
 Q_NETWORK_BIAS_NAME = 'fullconn_bias_'
-TRANSITION_QUQUE_ENQUEUE_NAME = 'transition_queue_enqueue'
-TRANSITION_QUQUE_DEQUEUE_NAME = 'transition_queue_dequeue'
-TRANSITION_QUQUE_SIZE_NAME = 'transition_queue_size'
 
-Q_NETWORK_WEIGHT_SHAPE = [
-    [STATE_SPACE, 5],
-    [5, 5],
-    [5, ACTION_SPACE]
-]
-
-Q_NETWORK_BIAS_SHAPE = [
-    [1, 5],
-    [1, 5],
-    [1, ACTION_SPACE]
-]
+Q_NETWORK_WEIGHT_SHAPE = None
+Q_NETWORK_BIAS_SHAPE = None
 
 FULLCONN_OUTPUT = 'fullconn_output'
 FULLCONN_OUTPUT_WITH_TANH = 'fullconn_output_with_tanh'
@@ -55,10 +43,10 @@ CROSS_ENTROPY_LOSS = 'cross_entropy_loss'
 ADAM_OPTIMIZER = 'adam_optimizer'
 
 EPSILON_INIT = 1.0
-EPSILON_MIN = 0.01
+EPSILON_MIN = 0.1
 EPSILON_DECAY = 0.9999
 
-GAMMA = 0.9
+GAMMA = 0.5
 
 LOG_PATH = 'log/'
 MODEL_SAVE_PATH = LOG_PATH + 'agent_model/'
@@ -71,12 +59,12 @@ def initialize(state_space, action_space):
 
     global Q_NETWORK_WEIGHT_SHAPE, Q_NETWORK_BIAS_SHAPE
     Q_NETWORK_WEIGHT_SHAPE = [
-        [STATE_SPACE, 5],
-        [5, 5],
-        [5, ACTION_SPACE]
+        [STATE_SPACE, 32],
+        [32, 32],
+        [32, ACTION_SPACE]
     ]
     Q_NETWORK_BIAS_SHAPE = [
-        5,
-        5,
+        32,
+        32,
         ACTION_SPACE
     ]

@@ -79,3 +79,4 @@ class TargetQNetwork(tsg.TFSubGraph):
                 curr_inputs = self.outputs[const.FULLCONN_OUTPUT + str(i)]
 
         self.outputs[const.Q_VALUE_OUTPUT] = curr_inputs
+        self.outputs[const.MAX_Q_OUTPUT] = tf.reduce_max(self.outputs[const.Q_VALUE_OUTPUT])

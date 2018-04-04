@@ -8,6 +8,7 @@
 import sys
 import constants as const
 import functions as func
+import agent
 
 
 class GameEnv(object):
@@ -34,8 +35,10 @@ def main(argv):
         # agents make decision
         harvest_level = 0
 
+        players = []
         # TODO: plugin my agent
         for player in range(const.N_AGENTS):
+            players.append(agent.DqnAgent('DQNmodel'+str(player)))
             effort = int(input("player" + str(player) + "input"))
             harvest_level += func.harvest_function(effort, resource)
 
