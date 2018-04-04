@@ -2,18 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0c70bd49-538f-42e4-a72e-e34ffc7ff529" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/agent/log/agent_model/DQNmodel.data-00000-of-00001" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/agent/log/agent_model/DQNmodel.index" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/agent/log/agent_model/DQNmodel.meta" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/agent/log/agent_model/checkpoint" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/agent/test_agent.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/CRP.iml" afterPath="$PROJECT_DIR$/.idea/CRP.iml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/agent/agent.py" afterPath="$PROJECT_DIR$/agent/agent.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/agent/constants.py" afterPath="$PROJECT_DIR$/agent/constants.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/agent/q_network.py" afterPath="$PROJECT_DIR$/agent/q_network.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/agent/test.py" afterPath="$PROJECT_DIR$/agent/test.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/environment/main_loop.py" afterPath="$PROJECT_DIR$/environment/main_loop.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -332,7 +321,14 @@
       <option name="project" value="LOCAL" />
       <updated>1522510559895</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="complete DQN agent">
+      <created>1522808822776</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1522808822776</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TodoView">
@@ -347,11 +343,11 @@
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
     <layout>
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.16204691" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.16204691" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3296582" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="8" side_tool="true" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="WINDOWED" visible="true" show_stripe_button="true" weight="0.30227518" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" x="1920" y="23" width="1536" height="801" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32855567" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" x="1920" y="23" width="1536" height="801" />
+      <window_info id="Version Control" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.32855567" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" x="1920" y="23" width="1536" height="801" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.66262406" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" x="-36" y="285" width="1876" height="489" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.39911798" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
@@ -398,7 +394,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="update transition memory" />
-    <option name="LAST_COMMIT_MESSAGE" value="update transition memory" />
+    <MESSAGE value="complete DQN agent" />
+    <option name="LAST_COMMIT_MESSAGE" value="complete DQN agent" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager />
