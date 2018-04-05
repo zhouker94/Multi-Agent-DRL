@@ -24,15 +24,23 @@ def growth_function(n):
 class GameEnv(object):
     def __init__(self):
         print("Game start!")
-        self.common_resource_pool = const.RESOURCE_CAPACITY_N_MAX * 1.0
+        self.common_resource_pool = const.RESOURCE_CAPACITY_N_MAX
 
-    def step(self, harvest_level):
-        self.common_resource_pool = self.common_resource_pool + \
-                                    growth_function(self.common_resource_pool) - \
-                                    harvest_level
-        # print('see!', self.common_resource_pool)
-        done = True if self.common_resource_pool <= 0 else False
-        return self.common_resource_pool, done
+    def step(self, efforts):
+        effort_sum = sum(efforts)
+        harvest_level = harvest_function(effort_sum, self.common_resource_pool)
+        self.common_resource_pool += (growth_function(self.common_resource_pool) - harvest_level)
+
+        # reward function
+        rewards = [x / effort_sum * harvest_level for x in efforts]
+
+        if self.common_resource_pool <= 0:
+            done = True
+            rewards = [-100] * const.N_AGENTS
+        else:
+            done = False
+
+        return self.common_resource_pool, rewards, done
 
     def reset(self):
         self.common_resource_pool = const.RESOURCE_CAPACITY_N_MAX * 1.0
@@ -49,7 +57,6 @@ def main(argv):
 
     players = []
     for player in range(const.N_AGENTS):
-        # print(player)
         players.append(agent.DqnAgent(str(player)))
 
     for e in range(const.TRAINING_EPISODES):
@@ -57,16 +64,14 @@ def main(argv):
         if players[0].epsilon <= const.EPSILON_MIN:
             break
 
-        env.reset()
         state = np.asarray([env.reset()])
         state = np.reshape(state, [1, const.STATE_SPACE])
 
         actions = [0] * const.N_AGENTS
         efforts = [const.INIT_EFFORT] * const.N_AGENTS
-        harvests = [0] * const.N_AGENTS
+        score = 0
 
         for time in range(const.MAX_STEP):
-            score = 0
             for index, player in enumerate(players):
                 action = player.choose_action(state)
                 if action == 0:
@@ -75,19 +80,13 @@ def main(argv):
                     efforts[index] -= const.MIN_INCREMENT
                 if efforts[index] <= 0:
                     efforts[index] = 1
-                harvests[index] = harvest_function(efforts[index], env.common_resource_pool)
                 actions[index] = action
 
-            score += sum(harvests)
-            resource, done = env.step(score)
-
-            if done:
-                harvests = [-100] * const.N_AGENTS
-
+            resource, rewards, done = env.step(efforts)
+            score += sum(rewards)
             next_state = np.reshape([resource], [1, const.STATE_SPACE])
-            [player.store_experience(state, actions[index], harvests[index], next_state, done)
+            [player.store_experience(state, actions[index], rewards[index], next_state, done)
              for index, player in enumerate(players)]
-
             state = next_state
 
             # copy weights from online q network to target q network
@@ -97,18 +96,19 @@ def main(argv):
             else:
                 copy_step += 1
 
-            '''
+            #'''
             print("efforts", efforts)
-            print("harvests", harvests)
+            print("reward", rewards)
             print("remain:", env.common_resource_pool)
-            '''
+            #'''
 
             if done:
-                score = score - 100 / const.N_AGENTS
-                print("episode: {}/{}, score: {}, e: {:.2}"
-                      .format(e, const.TRAINING_EPISODES, score, players[0].epsilon))
-                scores.append(score)
                 break
+
+        score /= const.N_AGENTS
+        print("episode: {}/{}, score: {}, e: {:.2}"
+              .format(e, const.TRAINING_EPISODES, score, players[0].epsilon))
+        scores.append(score)
 
         if len(players[0].memory) > const.MINI_BATCH_SIZE:
             [player.learn() for player in players]

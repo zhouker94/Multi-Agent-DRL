@@ -7,7 +7,7 @@
 
 ENV_NAME = 'CartPole-v0'
 
-MAX_STEP = 500
+MAX_STEP = 100
 MEMORY_SIZE = 5000
 
 ACTION_SPACE = 0
@@ -15,7 +15,7 @@ STATE_SPACE = 0
 
 COPY_STEP = 20
 
-TRAINING_EPISODES = 300
+TRAINING_EPISODES = 3
 MINI_BATCH_SIZE = 64
 
 TARGET_Q_SCOPE = 'target_q'
@@ -44,7 +44,7 @@ ADAM_OPTIMIZER = 'adam_optimizer'
 
 EPSILON_INIT = 1.0
 EPSILON_MIN = 0.1
-EPSILON_DECAY = 0.9999
+EPSILON_DECAY = 0.99999
 
 GAMMA = 0.5
 
@@ -70,15 +70,15 @@ def initialize(state_space, action_space):
     print("done!")
     print(Q_NETWORK_WEIGHT_SHAPE)
 
-
+# environment configuration
 N_AGENTS = 2
-RESOURCE_CAPACITY_N_MAX = 100
+RESOURCE_CAPACITY_N_MAX = 100.0
 
 REPLENISHMENT_RATE = 0.5
 
 ALPHA = 0.35
 BETA = 0.4
-
+COST_C = 0.5
 INIT_EFFORT = 5
 
 MIN_INCREMENT = 2
