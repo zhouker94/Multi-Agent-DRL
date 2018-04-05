@@ -22,9 +22,9 @@ class DqnAgent(object):
                                        shape=[None, const.STATE_SPACE])
         self._input_y = tf.placeholder(tf.float32,
                                        shape=[None, const.ACTION_SPACE])
-        self._target_q = q_network.TargetQNetwork(scope=const.TARGET_Q_SCOPE,
+        self._target_q = q_network.TargetQNetwork(scope=const.TARGET_Q_SCOPE + name,
                                                   inputs=(self._input_x, self._input_y))
-        self._online_q = q_network.OnlineQNetwork(scope=const.ONLINE_Q_SCOPE,
+        self._online_q = q_network.OnlineQNetwork(scope=const.ONLINE_Q_SCOPE + name,
                                                   inputs=(self._input_x, self._input_y))
 
         target_q_weights = tf.get_collection(const.TARGET_Q_COLLECTION)
@@ -34,7 +34,7 @@ class DqnAgent(object):
         self._target_q.define_graph()
         self._online_q.define_graph()
 
-        # The agent should hold a tf session
+        # The rl_brain should hold a tf session
         self.sess = tf.Session()
 
         self.saver = tf.train.Saver()
@@ -43,6 +43,7 @@ class DqnAgent(object):
             print("load successfully")
             self.saver.restore(self.sess, const.MODEL_SAVE_PATH + self._name)
 
+        np.random.seed(seed=int(name))
         init_op = tf.global_variables_initializer()
         self.sess.run(init_op)
 
@@ -56,13 +57,13 @@ class DqnAgent(object):
         if random.random() >= self.epsilon:
             return np.argmax(q_values)
         else:
-            return np.random.randint(0, const.ACTION_SPACE - 1)
+            return np.random.randint(const.ACTION_SPACE)
 
     def learn(self):
         # sample batch memory from all memory
         mini_batch = random.sample(self.memory, const.MINI_BATCH_SIZE)
-        states = np.zeros((const.MINI_BATCH_SIZE, 4))
-        targets = np.zeros((const.MINI_BATCH_SIZE, 2))
+        states = np.zeros((const.MINI_BATCH_SIZE, const.STATE_SPACE))
+        targets = np.zeros((const.MINI_BATCH_SIZE, const.ACTION_SPACE))
 
         for index, (state, action, reward, next_state, done) in enumerate(mini_batch):
             q_eval = self.sess.run(
@@ -77,21 +78,19 @@ class DqnAgent(object):
                     self._input_x: next_state,  # newest params
                 })
             target = reward
-            ##########
+
             if not done:
                 target = (reward + self.gamma * q_next)
-            ##########
+
             target_f = q_eval
             target_f[0][action] = target
 
-            states[index] = np.reshape(state, 4)
-            targets[index] = np.reshape(target_f, 2)
-            # self.model.fit(state, target_f, epochs=1, verbose=0)
+            states[index] = np.reshape(state, const.STATE_SPACE)
+            targets[index] = np.reshape(target_f, const.ACTION_SPACE)
 
         _, loss = self.sess.run([self._online_q.outputs[const.ADAM_OPTIMIZER],
                                  self._online_q.outputs[const.REDUCE_MEAN_LOSS]],
                                 feed_dict={self._input_x: states, self._input_y: targets})
-        print(loss)
         if self.epsilon > const.EPSILON_MIN:
             self.epsilon *= const.EPSILON_DECAY
 

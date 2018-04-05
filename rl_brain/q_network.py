@@ -55,6 +55,7 @@ class TargetQNetwork(tsg.TFSubGraph):
         self.fullconn_weight = []
         self.fullconn_bias = []
         for i in range(const.Q_NETWORK_FULLCONN_NUM):
+            # print(const.Q_NETWORK_WEIGHT_SHAPE)
             self.fullconn_weight.append(
                 Utils.create_random_normal_variable(name=const.Q_NETWORK_WEIGHT_NAME + str(i),
                                                     scope=self.scope,

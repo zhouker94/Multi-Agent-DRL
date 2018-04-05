@@ -2,7 +2,7 @@
 # @Time    : 2018/2/11 下午8:47
 # @Author  : Hanwei Zhu
 # @Email   : hanweiz@student.unimelb.edu.au
-# @File    : constants.py
+# @File    : env_constants.py
 # @Software: PyCharm Community Edition
 
 ENV_NAME = 'CartPole-v0'
@@ -15,7 +15,7 @@ STATE_SPACE = 0
 
 COPY_STEP = 20
 
-TRAINING_EPISODES = 1000
+TRAINING_EPISODES = 300
 MINI_BATCH_SIZE = 64
 
 TARGET_Q_SCOPE = 'target_q'
@@ -53,7 +53,6 @@ MODEL_SAVE_PATH = LOG_PATH + 'agent_model/'
 
 
 def initialize(state_space, action_space):
-
     global STATE_SPACE, ACTION_SPACE
     STATE_SPACE, ACTION_SPACE = state_space, action_space
 
@@ -68,3 +67,18 @@ def initialize(state_space, action_space):
         32,
         ACTION_SPACE
     ]
+    print("done!")
+    print(Q_NETWORK_WEIGHT_SHAPE)
+
+
+N_AGENTS = 2
+RESOURCE_CAPACITY_N_MAX = 100
+
+REPLENISHMENT_RATE = 0.5
+
+ALPHA = 0.35
+BETA = 0.4
+
+INIT_EFFORT = 5
+
+MIN_INCREMENT = 2
