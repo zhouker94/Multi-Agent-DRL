@@ -101,7 +101,6 @@ class DqnAgent(object):
         biases = zip(self._online_q.fullconn_bias, self._target_q.fullconn_bias)
         for bias in biases:
             self.sess.run(tf.assign(*bias))
-        print("update weights finished!")
 
     def store_experience(self, state, action, reward, next_state, done):
         transition = (state, action, np.asarray(reward), next_state, done)

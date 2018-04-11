@@ -8,14 +8,14 @@
 ENV_NAME = 'CartPole-v0'
 
 MAX_STEP = 100
-MEMORY_SIZE = 5000
+MEMORY_SIZE = 1000
 
 ACTION_SPACE = 0
 STATE_SPACE = 0
 
-COPY_STEP = 20
+COPY_STEP = 5
 
-TRAINING_EPISODES = 3
+TRAINING_EPISODES = 1
 MINI_BATCH_SIZE = 64
 
 TARGET_Q_SCOPE = 'target_q'
@@ -42,11 +42,11 @@ REDUCE_MEAN_LOSS = 'reduce_mean_loss'
 CROSS_ENTROPY_LOSS = 'cross_entropy_loss'
 ADAM_OPTIMIZER = 'adam_optimizer'
 
-EPSILON_INIT = 1.0
+EPSILON_INIT = 0
 EPSILON_MIN = 0.1
-EPSILON_DECAY = 0.99999
+EPSILON_DECAY = 0.9999
 
-GAMMA = 0.5
+GAMMA = 0.3
 
 LOG_PATH = 'log/'
 MODEL_SAVE_PATH = LOG_PATH + 'agent_model/'
@@ -58,13 +58,13 @@ def initialize(state_space, action_space):
 
     global Q_NETWORK_WEIGHT_SHAPE, Q_NETWORK_BIAS_SHAPE
     Q_NETWORK_WEIGHT_SHAPE = [
-        [STATE_SPACE, 32],
-        [32, 32],
-        [32, ACTION_SPACE]
+        [STATE_SPACE, 16],
+        [16, 16],
+        [16, ACTION_SPACE]
     ]
     Q_NETWORK_BIAS_SHAPE = [
-        32,
-        32,
+        16,
+        16,
         ACTION_SPACE
     ]
     print("done!")

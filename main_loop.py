@@ -60,10 +60,10 @@ def main(argv):
         players.append(agent.DqnAgent(str(player)))
 
     for e in range(const.TRAINING_EPISODES):
-
+        '''
         if players[0].epsilon <= const.EPSILON_MIN:
             break
-
+        '''
         state = np.asarray([env.reset()])
         state = np.reshape(state, [1, const.STATE_SPACE])
 
@@ -96,11 +96,11 @@ def main(argv):
             else:
                 copy_step += 1
 
-            #'''
+            
             print("efforts", efforts)
             print("reward", rewards)
             print("remain:", env.common_resource_pool)
-            #'''
+            
 
             if done:
                 break
@@ -112,10 +112,11 @@ def main(argv):
 
         if len(players[0].memory) > const.MINI_BATCH_SIZE:
             [player.learn() for player in players]
-
+    
+    '''
     plt.plot(scores)
     plt.show()
-
+    '''
 
 if __name__ == '__main__':
     main(sys.argv)
