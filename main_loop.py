@@ -32,11 +32,11 @@ class GameEnv(object):
         self.common_resource_pool += (growth_function(self.common_resource_pool) - harvest_level)
 
         # reward function
-        rewards = [x / effort_sum * harvest_level for x in efforts]
+        rewards = [0.5 * self.common_resource_pool + 0.5 * x / effort_sum * harvest_level for x in efforts]
 
         if self.common_resource_pool <= 0:
             done = True
-            rewards = [-100] * const.N_AGENTS
+            rewards = [-10] * const.N_AGENTS
         else:
             done = False
 
@@ -57,13 +57,12 @@ def main(argv):
 
     players = []
     for player in range(const.N_AGENTS):
-        players.append(agent.DqnAgent(str(player)))
+        players.append(agent.DqnAgent("DQN_" + str(player)))
 
     for e in range(const.TRAINING_EPISODES):
-        '''
         if players[0].epsilon <= const.EPSILON_MIN:
             break
-        '''
+
         state = np.asarray([env.reset()])
         state = np.reshape(state, [1, const.STATE_SPACE])
 
@@ -89,18 +88,11 @@ def main(argv):
              for index, player in enumerate(players)]
             state = next_state
 
-            # copy weights from online q network to target q network
-            if copy_step >= const.COPY_STEP:
-                [player.update_target_q() for player in players]
-                copy_step = 0
-            else:
-                copy_step += 1
-
-            
+            '''
             print("efforts", efforts)
             print("reward", rewards)
             print("remain:", env.common_resource_pool)
-            
+            '''
 
             if done:
                 break
@@ -111,12 +103,27 @@ def main(argv):
         scores.append(score)
 
         if len(players[0].memory) > const.MINI_BATCH_SIZE:
-            [player.learn() for player in players]
-    
-    '''
+            for player in players:
+                player.learn()
+
+        # copy weights from online q network to target q network
+        if copy_step >= const.COPY_STEP:
+            print("Copy start!")
+            [player.update_target_q() for player in players]
+            print("Copy finished!")
+            copy_step = 0
+        else:
+            copy_step += 1
+
     plt.plot(scores)
+    plt.interactive(False)
+    plt.xlabel('Epoch')
+    plt.ylabel('Avg score')
     plt.show()
-    '''
+
+    for player in players:
+        player.save_model()
+
 
 if __name__ == '__main__':
     main(sys.argv)

@@ -9,14 +9,13 @@ import q_network
 
 
 class DqnAgent(object):
-    def __init__(self, name, learning_rate=0.01):
+    def __init__(self, name, epsilon=const.EPSILON_INIT, learning_rate=0.01, learning_mode=True):
         self._name = name
-
-        self.epsilon = const.EPSILON_INIT
+        self.epsilon = epsilon
         self.gamma = const.GAMMA
         self._learning_rate = learning_rate
-
-        self.memory = deque(maxlen=2000)
+        self._learning_mode = learning_mode
+        self.memory = deque(maxlen=const.MEMORY_SIZE)
 
         self._input_x = tf.placeholder(tf.float32,
                                        shape=[None, const.STATE_SPACE])
@@ -42,19 +41,16 @@ class DqnAgent(object):
         if os.path.exists(const.MODEL_SAVE_PATH + self._name):
             print("load successfully")
             self.saver.restore(self.sess, const.MODEL_SAVE_PATH + self._name)
-
-        np.random.seed(seed=int(name))
-        init_op = tf.global_variables_initializer()
-        self.sess.run(init_op)
+        else:
+            init_op = tf.global_variables_initializer()
+            self.sess.run(init_op)
+        np.random.seed(seed=hash(self._name) % 256)
 
     def choose_action(self, state):
-        if not self.epsilon <= const.EPSILON_MIN:
-            self.epsilon *= const.EPSILON_DECAY
-
         q_values = self.sess.run(self._online_q.outputs[const.Q_VALUE_OUTPUT],
                                  feed_dict={self._input_x: state})
 
-        if random.random() >= self.epsilon:
+        if not self._learning_mode or random.random() >= self.epsilon:
             return np.argmax(q_values)
         else:
             return np.random.randint(const.ACTION_SPACE)
@@ -91,8 +87,8 @@ class DqnAgent(object):
         _, loss = self.sess.run([self._online_q.outputs[const.ADAM_OPTIMIZER],
                                  self._online_q.outputs[const.REDUCE_MEAN_LOSS]],
                                 feed_dict={self._input_x: states, self._input_y: targets})
-        if self.epsilon > const.EPSILON_MIN:
-            self.epsilon *= const.EPSILON_DECAY
+
+        self.epsilon -= const.EPSILON_DECAY
 
     def update_target_q(self):
         weights = zip(self._online_q.fullconn_weight, self._target_q.fullconn_weight)
@@ -116,5 +112,9 @@ class DqnAgent(object):
         print("Model saved in path: %s" % save_path)
 
     def __exit__(self):
-        self.save_model()
+        print("hha")
+        if self._learning_mode:
+            print("yeah")
+            self.save_model()
+        print("close")
         self.sess.close()
