@@ -29,15 +29,32 @@ class GameEnv(object):
     def step(self, efforts):
         effort_sum = sum(efforts)
         harvest_level = harvest_function(effort_sum, self.common_resource_pool)
-        self.common_resource_pool += (growth_function(self.common_resource_pool) - harvest_level)
-
+        delta_N = growth_function(self.common_resource_pool) - harvest_level
+        self.common_resource_pool += delta_N
+        
         # reward function
-        rewards = [0.5 * self.common_resource_pool + 0.5 * (x / effort_sum * harvest_level - 0.5 * x)
-                   for x in efforts]
+        pi_list = [x / effort_sum * harvest_level - 0.5 * x for x in efforts]
+        if delta_N > 0:
+            sustianability_goal = 1
+        elif delta_N == 0:
+            sustianability_goal = 0
+        else:
+            sustianability_goal = -1
+
+        for pi in pi_list:
+            if pi > 0:
+                wealth_goal = 1
+            elif pi == 0:
+                wealth_goal = 0
+            else:
+                wealth_goal = -1
+
+            r = 0.5 * sustianability_goal + 0.5 * wealth_goal
+            rewards.append(r)
+        
 
         if self.common_resource_pool <= 0:
             done = True
-            rewards = [-10] * const.N_AGENTS
         else:
             done = False
 
