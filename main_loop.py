@@ -29,17 +29,17 @@ class GameEnv(object):
     def step(self, efforts):
         effort_sum = sum(efforts)
         harvest_level = harvest_function(effort_sum, self.common_resource_pool)
-        delta_N = growth_function(self.common_resource_pool) - harvest_level
-        self.common_resource_pool += delta_N
-        
+        delta_n = growth_function(self.common_resource_pool) - harvest_level
+        self.common_resource_pool += delta_n
+        rewards = []
         # reward function
         pi_list = [x / effort_sum * harvest_level - 0.5 * x for x in efforts]
-        if delta_N > 0:
-            sustianability_goal = 1
-        elif delta_N == 0:
-            sustianability_goal = 0
+        if delta_n > 0:
+            sustainability_goal = 1
+        elif delta_n == 0:
+            sustainability_goal = 0
         else:
-            sustianability_goal = -1
+            sustainability_goal = -1
 
         for pi in pi_list:
             if pi > 0:
@@ -49,27 +49,27 @@ class GameEnv(object):
             else:
                 wealth_goal = -1
 
-            r = 0.5 * sustianability_goal + 0.5 * wealth_goal
+            r = 0.5 * sustainability_goal + 0.5 * wealth_goal
             rewards.append(r)
-        
 
         if self.common_resource_pool <= 0:
             done = True
+            rewards = [-20] * const.N_AGENTS
         else:
             done = False
 
-        return self.common_resource_pool, rewards, done
+        return (self.common_resource_pool / 100, effort_sum, sum(pi_list)), rewards, done
 
     def reset(self):
         self.common_resource_pool = const.RESOURCE_CAPACITY_N_MAX * 1.0
-        return self.common_resource_pool
+        return self.common_resource_pool / 100, 0, 0
 
 
 def main(argv):
     # initialize
 
     env = GameEnv()
-    const.initialize(1, 2)
+    const.initialize(3, 2)
     copy_step = 0
     scores = []
 

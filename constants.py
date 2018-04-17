@@ -25,7 +25,7 @@ ONLINE_Q_SCOPE = 'online_q'
 TARGET_Q_COLLECTION = 'target_q_collection'
 ONLINE_Q_COLLECTION = 'online_q_collection'
 
-Q_NETWORK_FULLCONN_NUM = 3
+Q_NETWORK_FULLCONN_NUM = 4
 Q_NETWORK_WEIGHT_NAME = 'fullconn_weight_'
 Q_NETWORK_BIAS_NAME = 'fullconn_bias_'
 
@@ -48,7 +48,7 @@ EPSILON_INIT = 1.0
 EPSILON_MIN = 0.1
 EPSILON_DECAY = 0.001
 
-GAMMA = 0.3
+GAMMA = 0.9
 
 LOG_PATH = 'log/'
 MODEL_SAVE_PATH = LOG_PATH + 'agent_model/'
@@ -61,11 +61,13 @@ def initialize(state_space, action_space):
     global Q_NETWORK_WEIGHT_SHAPE, Q_NETWORK_BIAS_SHAPE
     Q_NETWORK_WEIGHT_SHAPE = [
         [STATE_SPACE, 16],
-        [16, 16],
+        [16, 32],
+        [32, 16],
         [16, ACTION_SPACE]
     ]
     Q_NETWORK_BIAS_SHAPE = [
         16,
+        32,
         16,
         ACTION_SPACE
     ]
