@@ -32,7 +32,8 @@ class GameEnv(object):
         self.common_resource_pool += (growth_function(self.common_resource_pool) - harvest_level)
 
         # reward function
-        rewards = [0.5 * self.common_resource_pool + 0.5 * x / effort_sum * harvest_level for x in efforts]
+        rewards = [0.5 * self.common_resource_pool + 0.5 * (x / effort_sum * harvest_level - 0.5 * x)
+                   for x in efforts]
 
         if self.common_resource_pool <= 0:
             done = True
