@@ -15,7 +15,6 @@ import environment
 
 def main(argv):
     # initialize
-
     env = environment.GameEnv()
     const.initialize(3, 2)
     scores = []
@@ -35,6 +34,7 @@ def main(argv):
         score = 0
 
         for time in range(100):
+            print(env.common_resource_pool)
             resource_level.append(env.common_resource_pool)
             for index, player in enumerate(players):
                 action = player.choose_action(state)
@@ -42,15 +42,19 @@ def main(argv):
                     efforts[index] += const.MIN_INCREMENT
                 else:
                     efforts[index] -= const.MIN_INCREMENT
-                if efforts[index] <= 0:
-                    efforts[index] = 1
+
+                if efforts[index] < const.MIN_EFFORT:
+                    efforts[index] = const.MIN_EFFORT
+                elif efforts[index] > const.MAX_EFFORT:
+                    efforts[index] = const.MAX_EFFORT
                 actions[index] = action
 
             resource, rewards, done = env.step(efforts)
+            print("rewards:", rewards)
             score += sum(rewards)
             next_state = np.reshape([resource], [1, const.STATE_SPACE])
             state = next_state
-
+            print(efforts)
             if done:
                 break
 
@@ -61,10 +65,15 @@ def main(argv):
 
     plt.plot(resource_level)
     plt.interactive(False)
-    plt.xlabel('Resource level')
-    plt.ylabel('Time')
-    plt.ylim(0, 100)
+    plt.title("Time series with weight " + str(const.WEIGHT))
+    plt.ylabel('Resource level')
+    plt.xlabel('Time')
+    plt.ylim(0, 1000)
     plt.show()
+
+    with open(const.LOG_PATH + "test_log_with_weight_" + str(const.WEIGHT) + '.txt', "w+") as f:
+        for r in resource_level:
+            f.write(str(r) + '\n')
 
 
 if __name__ == '__main__':

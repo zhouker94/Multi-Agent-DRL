@@ -14,9 +14,10 @@ import environment
 
 
 def main(argv):
-    # initialize
 
+    # initialize
     env = environment.GameEnv()
+    print("weight is", const.WEIGHT)
     const.initialize(3, 2)
     copy_step = 0
     scores = []
@@ -43,8 +44,10 @@ def main(argv):
                     efforts[index] += const.MIN_INCREMENT
                 else:
                     efforts[index] -= const.MIN_INCREMENT
-                if efforts[index] <= 0:
-                    efforts[index] = 1
+                if efforts[index] < const.MIN_EFFORT:
+                    efforts[index] = const.MIN_EFFORT
+                elif efforts[index] > const.MAX_EFFORT:
+                    efforts[index] = const.MAX_EFFORT
                 actions[index] = action
 
             resource, rewards, done = env.step(efforts)
@@ -53,12 +56,6 @@ def main(argv):
             [player.store_experience(state, actions[index], rewards[index], next_state, done)
              for index, player in enumerate(players)]
             state = next_state
-
-            '''
-            print("efforts", efforts)
-            print("reward", rewards)
-            print("remain:", env.common_resource_pool)
-            '''
 
             if done:
                 break
