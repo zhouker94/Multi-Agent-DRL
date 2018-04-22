@@ -38,7 +38,7 @@ class DqnAgent(object):
 
         self.saver = tf.train.Saver()
         # train_writer = tf.summary.FileWriter(const.LOG_PATH, sess.graph)
-        if os.path.exists(const.MODEL_SAVE_PATH + self._name):
+        if os.path.exists(const.MODEL_SAVE_PATH):
             print("load successfully")
             self.saver.restore(self.sess, const.MODEL_SAVE_PATH + self._name)
         else:
@@ -106,15 +106,10 @@ class DqnAgent(object):
         pass
 
     def save_model(self):
-        if not os.path.exists(const.MODEL_SAVE_PATH + self._name):
-            os.makedirs(const.MODEL_SAVE_PATH + self._name)
+        if not os.path.exists(const.MODEL_SAVE_PATH):
+            os.makedirs(const.MODEL_SAVE_PATH)
         save_path = self.saver.save(self.sess, const.MODEL_SAVE_PATH + self._name)
         print("Model saved in path: %s" % save_path)
 
     def __exit__(self):
-        print("hha")
-        if self._learning_mode:
-            print("yeah")
-            self.save_model()
-        print("close")
         self.sess.close()
