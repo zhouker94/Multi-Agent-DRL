@@ -52,7 +52,14 @@ class DqnAgent(object):
         if not self._learning_mode or random.random() >= self.epsilon:
             return np.argmax(q_values)
         else:
-            return np.random.randint(const.ACTION_SPACE)
+
+            # decrease the probability of taking "self-fish" action
+            if random.random() >= 0.4:
+                return 1
+            else:
+                return 0
+
+            # return np.random.randint(const.ACTION_SPACE)
 
     def learn(self):
         # sample batch memory from all memory

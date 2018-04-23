@@ -15,7 +15,7 @@ TEST_STEP = 1
 ACTION_SPACE = 0
 STATE_SPACE = 0
 
-COPY_STEP = 5
+COPY_STEP = 20
 
 TRAINING_EPISODES = 1000
 MINI_BATCH_SIZE = 128
@@ -76,17 +76,20 @@ def initialize(state_space, action_space):
 
 
 # environment configuration
-N_AGENTS = 2
+N_AGENTS = 3
 RESOURCE_CAPACITY_N_MAX = 1000.0
-RESOURCE_CAPACITY_INIT = 500.0
+RESOURCE_CAPACITY_INIT = 1000.0
 
 REPLENISHMENT_RATE = 0.5
 
 ALPHA = 0.35
 BETA = 0.4
 COST_C = 0.5
+
+# important parameter in this project
 WEIGHT = 0.5
-INIT_EFFORT = 150
+
+INIT_EFFORT = 300 / N_AGENTS
 
 MIN_INCREMENT = 10
 

@@ -56,4 +56,4 @@ class GameEnv(object):
 
     def reset(self):
         self.common_resource_pool = const.RESOURCE_CAPACITY_INIT
-        return 0.5, 0, 0
+        return 1, 0, 0
