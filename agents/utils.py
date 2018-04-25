@@ -44,3 +44,6 @@ class Utils(object):
                                                    std_dev)
         return Utils.create_variable(name, scope, shape, dtype, initializer)
 
+    @staticmethod
+    def create_gru_cell(name, units_number, activation=tf.nn.relu):
+        return tf.contrib.rnn.GRUCell(num_units=units_number, activation=activation)

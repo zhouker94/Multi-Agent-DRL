@@ -18,7 +18,7 @@ class TFSubGraph(object):
     def define_graph(self):
         with tf.variable_scope(self.scope):
             self.create_variables()
-        self.implement_graph()
+            self.implement_graph()
 
     def create_variables(self):
         pass

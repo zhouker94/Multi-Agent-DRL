@@ -1,18 +1,18 @@
 import tensorflow as tf
+
 import constants as const
-from utils import Utils
-import tf_sub_graph as tsg
+from agents import tf_sub_graph as tsg
+from agents.utils import Utils
 
 
 class OnlineQNetwork(tsg.TFSubGraph):
     def __init__(self, scope, inputs, learning_rate=0.01):
         super(OnlineQNetwork, self).__init__(scope, inputs)
+        self.fullconn_bias = []
+        self.fullconn_weight = []
         self.learning_rate = learning_rate
 
     def create_variables(self):
-        c_names = [const.ONLINE_Q_COLLECTION, tf.GraphKeys.GLOBAL_VARIABLES]
-        self.fullconn_weight = []
-        self.fullconn_bias = []
         for i in range(const.Q_NETWORK_FULLCONN_NUM):
             self.fullconn_weight.append(
                 Utils.create_random_normal_variable(name=const.Q_NETWORK_WEIGHT_NAME + str(i),
@@ -49,11 +49,10 @@ class OnlineQNetwork(tsg.TFSubGraph):
 class TargetQNetwork(tsg.TFSubGraph):
     def __init__(self, scope, inputs):
         super(TargetQNetwork, self).__init__(scope, inputs)
+        self.fullconn_bias = []
+        self.fullconn_weight = []
 
     def create_variables(self):
-        c_names = [const.TARGET_Q_COLLECTION, tf.GraphKeys.GLOBAL_VARIABLES]
-        self.fullconn_weight = []
-        self.fullconn_bias = []
         for i in range(const.Q_NETWORK_FULLCONN_NUM):
             # print(const.Q_NETWORK_WEIGHT_SHAPE)
             self.fullconn_weight.append(

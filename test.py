@@ -6,11 +6,11 @@
 # @Software: PyCharm Community Edition
 
 import gym
-import sys
 import matplotlib.pyplot as plt
-import agent
 import numpy as np
+
 import constants as const
+from agents import agent
 
 
 def main(agrv):
@@ -64,5 +64,32 @@ def main(agrv):
     plt.plot(scores)
     plt.show()
 
+
+def test():
+    env = gym.make(const.ENV_NAME)
+    env = env.unwrapped
+    const.initialize(env.observation_space.shape[0], env.action_space.n)
+
+    dqn_agent = agent.DqnAgent('DQNmodel')
+    dqn_agent.epsilon = 0.0
+
+    state = env.reset()
+    state = np.reshape(state, [1, const.STATE_SPACE])
+
+    for time in range(const.MAX_STEP):
+        env.render()
+        action = dqn_agent.choose_action(state)
+        next_state, reward, done, _ = env.step(action)
+
+        next_state = np.reshape(next_state, [1, const.STATE_SPACE])
+        state = next_state
+
+        if done:
+            print("episode: {}/{}, score: {}, e: {:.2}"
+                  .format(1, const.TRAINING_EPISODES, time, dqn_agent.epsilon))
+            break
+
+
 if __name__ == '__main__':
-    main(sys.argv)
+    # main(sys.argv)
+    test()

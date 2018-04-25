@@ -1,9 +1,8 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2018/3/5 下午1:53
+# @Time    : 2018/4/25 16:33
 # @Author  : Hanwei Zhu
-# @Email   : hanweiz@student.unimelb.edu.au
-# @File    : test_agent.py
-# @Software: PyCharm Community Edition
+# @File    : drqn_main_loop.py
 
 import sys
 
@@ -18,15 +17,18 @@ from agents import agent
 def main(argv):
     # initialize
     env = environment.GameEnv()
+    print("weight is", const.WEIGHT)
     const.initialize(3, 2)
+    copy_step = 0
     scores = []
 
     players = []
     for player in range(const.N_AGENTS):
-        players.append(agent.DqnAgent(name="DQN_" + str(player), learning_mode=False))
+        players.append(agent.DrqnAgent("DRQN_" + str(player)))
 
-    resource_level = []
-    for e in range(const.TEST_STEP):
+    for e in range(const.TRAINING_EPISODES):
+        if players[0].epsilon <= const.EPSILON_MIN:
+            break
 
         state = np.asarray([env.reset()])
         state = np.reshape(state, [1, const.STATE_SPACE])
@@ -35,16 +37,13 @@ def main(argv):
         efforts = [const.INIT_EFFORT] * const.N_AGENTS
         score = 0
 
-        for time in range(100):
-            print(env.common_resource_pool)
-            resource_level.append(env.common_resource_pool)
+        for time in range(const.MAX_STEP):
             for index, player in enumerate(players):
                 action = player.choose_action(state)
                 if action == 0:
                     efforts[index] += const.MIN_INCREMENT
                 else:
                     efforts[index] -= const.MIN_INCREMENT
-
                 if efforts[index] < const.MIN_EFFORT:
                     efforts[index] = const.MIN_EFFORT
                 elif efforts[index] > const.MAX_EFFORT:
@@ -52,12 +51,13 @@ def main(argv):
                 actions[index] = action
 
             resource, rewards, done = env.step(efforts)
-            print("rewards:", rewards)
             score += sum(rewards)
             next_state = np.reshape([resource], [1, const.STATE_SPACE])
             state = next_state
-            print(efforts)
+
             if done:
+                [player.store_experience(state, actions[index], rewards[index], next_state, done)
+                 for index, player in enumerate(players)]
                 break
 
         score /= const.N_AGENTS
@@ -65,17 +65,28 @@ def main(argv):
               .format(e, const.TRAINING_EPISODES, score, players[0].epsilon))
         scores.append(score)
 
-    plt.plot(resource_level)
+        if len(players[0].memory) > const.MINI_BATCH_SIZE:
+            for player in players:
+                player.learn()
+
+        # copy weights from online q network to target q network
+        if copy_step >= const.COPY_STEP:
+            print("Copy start!")
+            [player.update_target_q() for player in players]
+            print("Copy finished!")
+            copy_step = 0
+        else:
+            copy_step += 1
+
+    plt.plot(scores)
     plt.interactive(False)
-    plt.title("Time series with weight " + str(const.WEIGHT))
-    plt.ylabel('Resource level')
-    plt.xlabel('Time')
-    plt.ylim(0, 1000)
+    plt.xlabel('Epoch')
+    plt.ylabel('Avg score')
     plt.show()
 
-    with open(const.LOG_PATH + "test_log_with_weight_" + str(const.WEIGHT) + '.txt', "w+") as f:
-        for r in resource_level:
-            f.write(str(r) + '\n')
+    for player in players:
+        player.save_model()
+        player.sess.close()
 
 
 if __name__ == '__main__':

@@ -2,15 +2,17 @@
 # @Time    : 2018/3/5 下午1:53
 # @Author  : Hanwei Zhu
 # @Email   : hanweiz@student.unimelb.edu.au
-# @File    : main_loop.py
+# @File    : dqn_main_loop.py
 # @Software: PyCharm Community Edition
 
 import sys
-import numpy as np
-import agent
-import constants as const
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+import constants as const
 import environment
+from agents import agent
 
 
 def main(argv):
