@@ -27,12 +27,12 @@ class DqnAgent(object):
         self._online_q = q_network.OnlineQNetwork(scope=const.ONLINE_Q_SCOPE + name,
                                                   inputs=(self._input_x, self._input_y))
 
+        self._target_q.define_graph()
+        self._online_q.define_graph()
+
         target_q_weights = self._target_q.fullconn_weight + self._target_q.fullconn_bias
         online_q_weights = self._online_q.fullconn_weight + self._online_q.fullconn_bias
         self.replace_target_op = [tf.assign(t, o) for t, o in zip(target_q_weights, online_q_weights)]
-
-        self._target_q.define_graph()
-        self._online_q.define_graph()
 
         # The rl_brain should hold a tf session
         self.sess = tf.Session()
@@ -126,10 +126,11 @@ class DrqnAgent(object):
         self.memory = deque(maxlen=const.MEMORY_SIZE)
 
         self._input_x = tf.placeholder(tf.float32,
-                                       shape=[None, const.STATE_SPACE, const.MAX_STEP])
+                                       shape=[None, None, const.STATE_SPACE])
         self._input_y = tf.placeholder(tf.float32,
                                        shape=[None, const.ACTION_SPACE])
         self._dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
+
         self._target_q = drq_network.TargetDRQNetwork(scope=const.TARGET_Q_SCOPE + name,
                                                       inputs=(self._input_x, self._input_y),
                                                       dropout_keep_prob=self._dropout_keep_prob)
@@ -137,12 +138,14 @@ class DrqnAgent(object):
                                                       inputs=(self._input_x, self._input_y),
                                                       dropout_keep_prob=self._dropout_keep_prob)
 
-        target_q_weights = self._target_q.rnn_cells
-        online_q_weights = self._online_q.rnn_cells
-        self.replace_target_op = [tf.assign(t, o) for t, o in zip(target_q_weights, online_q_weights)]
-
         self._target_q.define_graph()
         self._online_q.define_graph()
+
+        target_q_weights = self._target_q.layered_cell.trainable_variables
+        online_q_weights = self._online_q.layered_cell.trainable_variables
+
+        self.replace_target_op = \
+            [tf.assign(t, o) for t, o in zip(target_q_weights, online_q_weights)]
 
         # The rl_brain should hold a tf session
         self.sess = tf.Session()
@@ -159,7 +162,8 @@ class DrqnAgent(object):
 
     def choose_action(self, state):
         q_values = self.sess.run(self._online_q.outputs[const.Q_VALUE_OUTPUT],
-                                 feed_dict={self._input_x: state})
+                                 feed_dict={self._input_x: state,
+                                            self._dropout_keep_prob: 0.5})
 
         if not self._learning_mode or random.random() >= self.epsilon:
             return np.argmax(q_values)

@@ -13,18 +13,19 @@ import tensorflow as tf
 class OnlineDRQNetwork(tsg.TFSubGraph):
     def __init__(self, scope, inputs, dropout_keep_prob, learning_rate=0.01):
         super(OnlineDRQNetwork, self).__init__(scope, inputs)
-        self.rnn_cells = []
+        self.layered_cell = None
         self.rnn_layer = None
         self.learning_rate = learning_rate
         self.dropout_keep_prob = dropout_keep_prob
 
     def create_variables(self):
+        rnn_cells = []
         for i in range(const.DRQ_NETWORK_GRU_LAYER_NUM):
-            self.rnn_cells.append(
+            rnn_cells.append(
                 Utils.create_gru_cell(name=const.ONLINE_DRQ_NETWORK_WEIGHT_NAME + str(i),
                                       units_number=const.DRQ_NETWORK_UNITS_NUMBER[i]))
-        layered_cell = tf.contrib.rnn.MultiRNNCell(self.rnn_cells)
-        self.rnn_layer = tf.contrib.rnn.DropoutWrapper(layered_cell,
+        self.layered_cell = tf.contrib.rnn.MultiRNNCell(rnn_cells)
+        self.rnn_layer = tf.contrib.rnn.DropoutWrapper(self.layered_cell,
                                                        input_keep_prob=self.dropout_keep_prob,
                                                        output_keep_prob=self.dropout_keep_prob,
                                                        state_keep_prob=self.dropout_keep_prob,
@@ -46,18 +47,19 @@ class OnlineDRQNetwork(tsg.TFSubGraph):
 class TargetDRQNetwork(tsg.TFSubGraph):
     def __init__(self, scope, inputs, dropout_keep_prob, learning_rate=0.01):
         super(TargetDRQNetwork, self).__init__(scope, inputs)
-        self.rnn_cells = []
+        self.layered_cell = None
         self.rnn_layer = None
         self.learning_rate = learning_rate
         self.dropout_keep_prob = dropout_keep_prob
 
     def create_variables(self):
+        rnn_cells = []
         for i in range(const.DRQ_NETWORK_GRU_LAYER_NUM):
-            self.rnn_cells.append(
+            rnn_cells.append(
                 Utils.create_gru_cell(name=const.TARGET_DRQ_NETWORK_WEIGHT_NAME + str(i),
                                       units_number=const.DRQ_NETWORK_UNITS_NUMBER[i]))
-        layered_cell = tf.contrib.rnn.MultiRNNCell(self.rnn_cells)
-        self.rnn_layer = tf.contrib.rnn.DropoutWrapper(layered_cell,
+        self.layered_cell = tf.contrib.rnn.MultiRNNCell(rnn_cells)
+        self.rnn_layer = tf.contrib.rnn.DropoutWrapper(self.layered_cell,
                                                        input_keep_prob=self.dropout_keep_prob,
                                                        output_keep_prob=self.dropout_keep_prob,
                                                        state_keep_prob=self.dropout_keep_prob,
