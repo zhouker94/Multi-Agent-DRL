@@ -4,7 +4,7 @@
 # @Email   : hanweiz@student.unimelb.edu.au
 # @File    : test_agent.py
 # @Software: PyCharm Community Edition
-
+import argparse
 import sys
 
 import matplotlib.pyplot as plt
@@ -18,7 +18,12 @@ from agents import agent
 def main(argv):
     # initialize
     env = environment.GameEnv()
-    const.initialize(3, 2)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--n_agents', type=int)
+    parser.add_argument('--sustainable_weight', type=float)
+    parsed_args = parser.parse_args()
+
+    const.initialize(state_space=3, action_space=2, n_agents=parsed_args.n_agents, weight=parsed_args.sustainable_weight)
     scores = []
 
     players = []
@@ -67,10 +72,11 @@ def main(argv):
 
     plt.plot(resource_level)
     plt.interactive(False)
-    plt.title("Time series with weight " + str(const.WEIGHT))
+    plt.title("Time series weight=" + str(const.WEIGHT) + " agents=" + str(const.N_AGENTS))
     plt.ylabel('Resource level')
     plt.xlabel('Time')
     plt.ylim(0, 1000)
+    plt.savefig(const.LOG_PATH + 'test_plot')
     plt.show()
 
     with open(const.LOG_PATH + "test_log_with_weight_" + str(const.WEIGHT) + '.txt', "w+") as f:

@@ -30,53 +30,57 @@ def main(argv):
         if players[0].epsilon <= const.EPSILON_MIN:
             break
 
-        state = np.asarray([env.reset()])
         # shape: [Batch_size, Time step, State space]
-        state = np.reshape(state, [1, 1, const.STATE_SPACE])
+        state = np.zeros((1, const.MAX_STEP, const.STATE_SPACE))
+        state[0][0] = np.asarray([env.reset()])
 
-        actions = [0] * const.N_AGENTS
+        rewards = [[] for _ in range(const.N_AGENTS)]
+        actions = [[] for _ in range(const.N_AGENTS)]
+        terminate = []
+
         efforts = [const.INIT_EFFORT] * const.N_AGENTS
         score = 0
 
-        for time in range(const.MAX_STEP):
+        for time in range(1, const.MAX_STEP):
+
             for index, player in enumerate(players):
                 action = player.choose_action(state)
+
                 if action == 0:
                     efforts[index] += const.MIN_INCREMENT
                 else:
                     efforts[index] -= const.MIN_INCREMENT
+
                 if efforts[index] < const.MIN_EFFORT:
                     efforts[index] = const.MIN_EFFORT
                 elif efforts[index] > const.MAX_EFFORT:
                     efforts[index] = const.MAX_EFFORT
-                actions[index] = action
 
-            next_state, rewards, done = env.step(efforts)
-            score += sum(rewards)
-            next_state = np.reshape(next_state, [1, 1, const.STATE_SPACE])
+                actions[index].append(action)
+
+            next_state, curr_rewards, done = env.step(efforts)
+            score += sum(curr_rewards)
+
+            for i, rw in enumerate(curr_rewards):
+                rewards[i].append(rw)
 
             if done:
-                # add zeros to max time step
-                state = np.pad(state,
-                               [(0, 0),
-                                (0, const.MAX_STEP + 1 - state.shape[1]),
-                                (0, 0)],
-                               'constant')
+                terminate.append(True)
                 break
 
-            state = np.concatenate((state, next_state), axis=1)
+            terminate.append(False)
+            state[0][time] = np.reshape(next_state, [1, const.STATE_SPACE])
 
         score /= const.N_AGENTS
         print("episode: {}/{}, score: {}, e: {:.2}"
               .format(e, const.TRAINING_EPISODES, score, players[0].epsilon))
-        '''
-        [player.store_experience(state, actions[index], rewards[index], next_state, done)
+
+        [player.store_experience(state, actions[index], rewards[index], terminate)
             for index, player in enumerate(players)]
-        '''
-        print(state.shape)
+
         scores.append(score)
 
-        if len(players[0].memory) > const.MINI_BATCH_SIZE:
+        if len(players[0].memory) > const.DRQN_MINI_BATCH_SIZE:
             for player in players:
                 player.learn()
 
@@ -89,15 +93,15 @@ def main(argv):
         else:
             copy_step += 1
 
+    for player in players:
+        player.save_model()
+        player.sess.close()
+
     plt.plot(scores)
     plt.interactive(False)
     plt.xlabel('Epoch')
     plt.ylabel('Avg score')
     plt.show()
-
-    for player in players:
-        player.save_model()
-        player.sess.close()
 
 
 if __name__ == '__main__':

@@ -13,16 +13,20 @@ import numpy as np
 import constants as const
 import environment
 from agents import agent
+import argparse
 
 
 def main(argv):
-
     # initialize
     env = environment.GameEnv()
-    print("weight is", const.WEIGHT)
-    const.initialize(3, 2)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--n_agents', type=int)
+    parser.add_argument('--sustainable_weight', type=float)
+    parsed_args = parser.parse_args()
+
+    const.initialize(state_space=3, action_space=2, n_agents=parsed_args.n_agents, weight=parsed_args.sustainable_weight)
     copy_step = 0
-    scores = []
+    avg_scores = []
 
     players = []
     for player in range(const.N_AGENTS):
@@ -65,7 +69,7 @@ def main(argv):
         score /= const.N_AGENTS
         print("episode: {}/{}, score: {}, e: {:.2}"
               .format(e, const.TRAINING_EPISODES, score, players[0].epsilon))
-        scores.append(score)
+        avg_scores.append(score)
 
         if len(players[0].memory) > const.MINI_BATCH_SIZE:
             for player in players:
@@ -80,15 +84,16 @@ def main(argv):
         else:
             copy_step += 1
 
-    plt.plot(scores)
-    plt.interactive(False)
-    plt.xlabel('Epoch')
-    plt.ylabel('Avg score')
-    plt.show()
-
     for player in players:
         player.save_model()
         player.sess.close()
+
+    plt.plot(avg_scores)
+    plt.interactive(False)
+    plt.xlabel('Epoch')
+    plt.ylabel('Avg score')
+    plt.savefig(const.LOG_PATH + 'training_plot')
+    plt.show()
 
 
 if __name__ == '__main__':

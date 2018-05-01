@@ -52,8 +52,8 @@ class GameEnv(object):
         else:
             done = False
 
-        return (self.common_resource_pool / const.RESOURCE_CAPACITY_N_MAX, effort_sum, sum(pi_list)), rewards, done
+        return (self.common_resource_pool, effort_sum, sum(pi_list)), rewards, done
 
     def reset(self):
         self.common_resource_pool = const.RESOURCE_CAPACITY_INIT
-        return 1, 0, 0
+        return self.common_resource_pool, 0, 0

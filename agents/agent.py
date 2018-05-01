@@ -7,6 +7,7 @@ import tensorflow as tf
 
 import constants as const
 from agents import q_network, drq_network
+from sklearn.preprocessing import Normalizer
 
 
 class DqnAgent(object):
@@ -64,10 +65,13 @@ class DqnAgent(object):
     def learn(self):
         # sample batch memory from all memory
         mini_batch = random.sample(self.memory, const.MINI_BATCH_SIZE)
-        states = np.zeros((const.MINI_BATCH_SIZE, const.STATE_SPACE))
+
+        states = np.asarray([i[0] for i in mini_batch])
+        states = states.reshape((const.MINI_BATCH_SIZE, const.STATE_SPACE))
+
         targets = np.zeros((const.MINI_BATCH_SIZE, const.ACTION_SPACE))
 
-        for index, (state, action, reward, next_state, done) in enumerate(mini_batch):
+        for index, [state, action, reward, next_state, done] in enumerate(mini_batch):
             q_eval = self.sess.run(
                 self._online_q.outputs[const.Q_VALUE_OUTPUT],
                 feed_dict={
@@ -86,8 +90,6 @@ class DqnAgent(object):
 
             target_f = q_eval
             target_f[0][action] = target
-
-            states[index] = np.reshape(state, const.STATE_SPACE)
             targets[index] = np.reshape(target_f, const.ACTION_SPACE)
 
         _, loss = self.sess.run([self._online_q.outputs[const.ADAM_OPTIMIZER],
@@ -100,7 +102,7 @@ class DqnAgent(object):
         self.sess.run(self.replace_target_op)
 
     def store_experience(self, state, action, reward, next_state, done):
-        transition = (state, action, np.asarray(reward), next_state, done)
+        transition = [state, action, np.asarray(reward), next_state, done]
         self.memory.append(transition)
 
     def load(self, name):
@@ -177,7 +179,7 @@ class DrqnAgent(object):
 
     def learn(self):
         # sample batch memory from all memory
-        mini_batch = random.sample(self.memory, const.MINI_BATCH_SIZE)
+        mini_batch = random.sample(self.memory, const.DRQN_MINI_BATCH_SIZE)
         states = np.zeros((const.MINI_BATCH_SIZE, const.STATE_SPACE))
         targets = np.zeros((const.MINI_BATCH_SIZE, const.ACTION_SPACE))
 
@@ -213,8 +215,8 @@ class DrqnAgent(object):
     def update_target_q(self):
         self.sess.run(self.replace_target_op)
 
-    def store_experience(self, state, action, reward, next_state, done):
-        transition = (state, action, np.asarray(reward), next_state, done)
+    def store_experience(self, state, actions, rewards, terminate):
+        transition = (state, actions, rewards, terminate)
         self.memory.append(transition)
 
     def load(self, name):

@@ -26,6 +26,14 @@ class OnlineQNetwork(tsg.TFSubGraph):
     def implement_graph(self):
         curr_inputs = self.inputs[0]
 
+        # normalize input layer
+        fc_mean, fc_var = tf.nn.moments(
+            curr_inputs,
+            axes=[0]
+        )
+        epsilon = 0.001
+        curr_inputs = tf.nn.batch_normalization(curr_inputs, fc_mean, fc_var, None, None, epsilon)
+
         for i in range(const.Q_NETWORK_FULLCONN_NUM):
             self.outputs[const.FULLCONN_OUTPUT + str(i)] = \
                 tf.matmul(curr_inputs, self.fullconn_weight[i]) + self.fullconn_bias[i]
