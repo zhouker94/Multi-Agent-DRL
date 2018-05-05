@@ -26,7 +26,7 @@ def main(argv):
                      n_agents=parsed_args.n_agents,
                      weight=parsed_args.sustainable_weight)
     copy_step = 0
-    scores = []
+    avg_scores = []
 
     players = []
     for player in range(const.N_AGENTS):
@@ -83,7 +83,7 @@ def main(argv):
         [player.store_experience(state, actions[index], rewards[index], terminate)
          for index, player in enumerate(players)]
 
-        scores.append(score)
+        avg_scores.append(score)
 
         if len(players[0].memory) > const.DRQN_MINI_BATCH_SIZE:
             for player in players:
@@ -102,11 +102,12 @@ def main(argv):
         player.save_model()
         player.sess.close()
 
-    plt.plot(scores)
+    plt.switch_backend('agg')
+    plt.plot(avg_scores)
     plt.interactive(False)
     plt.xlabel('Epoch')
     plt.ylabel('Avg score')
-    plt.show()
+    plt.savefig(const.LOG_PATH + 'training_plot')
 
 
 if __name__ == '__main__':
