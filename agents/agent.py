@@ -60,7 +60,7 @@ class DqnAgent(object):
                 return 1
             else:
                 return 0
-                # return np.random.randint(const.ACTION_SPACE)
+            # return np.random.randint(const.ACTION_SPACE)
 
     def learn(self):
         # sample batch memory from all memory
@@ -75,18 +75,19 @@ class DqnAgent(object):
             q_eval = self.sess.run(
                 self._online_q.outputs[const.Q_VALUE_OUTPUT],
                 feed_dict={
-                    self._input_x: state,  # fixed params
+                    self._input_x: state,
                 })
 
             q_next = self.sess.run(
                 self._target_q.outputs[const.MAX_Q_OUTPUT],
                 feed_dict={
-                    self._input_x: next_state,  # newest params
+                    self._input_x: next_state,
                 })
+
             target = reward
 
             if not done:
-                target = (reward + self.gamma * q_next)
+                target += self.gamma * q_next
 
             target_f = q_eval
             target_f[0][action] = target
@@ -130,7 +131,7 @@ class DrqnAgent(object):
         self._input_x = tf.placeholder(tf.float32,
                                        shape=[None, None, const.STATE_SPACE])
         self._input_y = tf.placeholder(tf.float32,
-                                       shape=[None, const.ACTION_SPACE])
+                                       shape=[None, None, const.ACTION_SPACE])
         self._dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
 
         self._target_q = drq_network.TargetDRQNetwork(scope=const.TARGET_Q_SCOPE + name,
@@ -168,47 +169,53 @@ class DrqnAgent(object):
                                             self._dropout_keep_prob: 0.5})
 
         if not self._learning_mode or random.random() >= self.epsilon:
-            return np.argmax(q_values)
+            return np.argmax(q_values[:, -1, :], axis=1)
         else:
             # decrease the probability of taking "self-fish" action
             if random.random() >= 0.4:
                 return 1
             else:
                 return 0
-                # return np.random.randint(const.ACTION_SPACE)
+            # return np.random.randint(const.ACTION_SPACE)
 
     def learn(self):
         # sample batch memory from all memory
-        mini_batch = random.sample(self.memory, const.DRQN_MINI_BATCH_SIZE)
-        states = np.zeros((const.MINI_BATCH_SIZE, const.STATE_SPACE))
-        targets = np.zeros((const.MINI_BATCH_SIZE, const.ACTION_SPACE))
+        (states, actions, rewards, terminate) = random.sample(self.memory, 1)[0]
+        episode_length = len(actions)
 
-        for index, (state, action, reward, next_state, done) in enumerate(mini_batch):
-            q_eval = self.sess.run(
-                self._online_q.outputs[const.Q_VALUE_OUTPUT],
-                feed_dict={
-                    self._input_x: state,  # fixed params
-                })
+        # current states
+        q_eval = self.sess.run(
+            self._online_q.outputs[const.Q_VALUE_OUTPUT],
+            feed_dict={
+                self._input_x: states,
+                self._dropout_keep_prob: 1
+            })
+        # next states
+        q_next = self.sess.run(
+            self._target_q.outputs[const.MAX_Q_OUTPUT],
+            feed_dict={
+                self._input_x: states[:, 1:, :],
+                self._dropout_keep_prob: 1
+            })
 
-            q_next = self.sess.run(
-                self._target_q.outputs[const.MAX_Q_OUTPUT],
-                feed_dict={
-                    self._input_x: next_state,  # newest params
-                })
-            target = reward
+        targets = np.zeros(q_eval.shape)
 
-            if not done:
-                target = (reward + self.gamma * q_next)
+        # Bootstrapped Sequential Updates
+        for index in range(episode_length):
 
-            target_f = q_eval
-            target_f[0][action] = target
+            target = rewards[index]
+            if not terminate[index]:
+                target = target + self.gamma * q_next[:, index]
 
-            states[index] = np.reshape(state, const.STATE_SPACE)
-            targets[index] = np.reshape(target_f, const.ACTION_SPACE)
+            target_f = q_eval[:, index, :]
+            target_f[0][actions[index]] = target
+            targets[:, index, :] = target_f
 
         _, loss = self.sess.run([self._online_q.outputs[const.ADAM_OPTIMIZER],
                                  self._online_q.outputs[const.REDUCE_MEAN_LOSS]],
-                                feed_dict={self._input_x: states, self._input_y: targets})
+                                feed_dict={self._input_x: states,
+                                           self._input_y: targets,
+                                           self._dropout_keep_prob: 0.8})
 
         self.epsilon -= const.EPSILON_DECAY
 

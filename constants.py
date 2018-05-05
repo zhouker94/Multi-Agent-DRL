@@ -40,6 +40,7 @@ DRQ_NETWORK_GRU_LAYER_NUM = 3
 DRQ_NETWORK_UNITS_NUMBER = [128, 32, 2]
 ONLINE_DRQ_NETWORK_WEIGHT_NAME = "online_drqn_weight_"
 TARGET_DRQ_NETWORK_WEIGHT_NAME = "target_drqn_weight"
+GRU_STATE_OUTPUT = "gru_state_output"
 
 Q_VALUE_OUTPUT = 'q_value_output'
 ACTION_OUTPUT = 'action_output'
@@ -51,7 +52,7 @@ ADAM_OPTIMIZER = 'adam_optimizer'
 
 EPSILON_INIT = 1.0
 EPSILON_MIN = 0.1
-EPSILON_DECAY = 0.001
+EPSILON_DECAY = 0.1
 
 GAMMA = 0.9
 

@@ -33,6 +33,15 @@ class OnlineDRQNetwork(tsg.TFSubGraph):
 
     def implement_graph(self):
         curr_inputs = self.inputs[0]
+
+        # normalize input layer
+        fc_mean, fc_var = tf.nn.moments(
+            curr_inputs,
+            axes=[0]
+        )
+        epsilon = 0.001
+        curr_inputs = tf.nn.batch_normalization(curr_inputs, fc_mean, fc_var, None, None, epsilon)
+
         curr_inputs, _ = tf.nn.dynamic_rnn(cell=self.rnn_layer, inputs=curr_inputs, dtype=tf.float32)
 
         self.outputs[const.Q_VALUE_OUTPUT] = curr_inputs
@@ -59,6 +68,7 @@ class TargetDRQNetwork(tsg.TFSubGraph):
                 Utils.create_gru_cell(name=const.TARGET_DRQ_NETWORK_WEIGHT_NAME + str(i),
                                       units_number=const.DRQ_NETWORK_UNITS_NUMBER[i]))
         self.layered_cell = tf.contrib.rnn.MultiRNNCell(rnn_cells)
+
         self.rnn_layer = tf.contrib.rnn.DropoutWrapper(self.layered_cell,
                                                        input_keep_prob=self.dropout_keep_prob,
                                                        output_keep_prob=self.dropout_keep_prob,
@@ -67,12 +77,10 @@ class TargetDRQNetwork(tsg.TFSubGraph):
 
     def implement_graph(self):
         curr_inputs = self.inputs[0]
-        curr_inputs, _ = tf.nn.dynamic_rnn(cell=self.rnn_layer, inputs=curr_inputs, dtype=tf.float32)
+        curr_inputs, self.outputs[const.GRU_STATE_OUTPUT] = \
+            tf.nn.dynamic_rnn(cell=self.rnn_layer,
+                              inputs=curr_inputs,
+                              dtype=tf.float32)
 
         self.outputs[const.Q_VALUE_OUTPUT] = curr_inputs
-
-        self.outputs[const.REDUCE_MEAN_LOSS] = tf.reduce_mean(tf.squared_difference(self.inputs[1],
-                                                                                    self.outputs[const.Q_VALUE_OUTPUT]))
-
-        self.outputs[const.ADAM_OPTIMIZER] = \
-            tf.train.AdamOptimizer(1e-4).minimize(self.outputs[const.REDUCE_MEAN_LOSS])
+        self.outputs[const.MAX_Q_OUTPUT] = tf.reduce_max(self.outputs[const.Q_VALUE_OUTPUT], axis=2)

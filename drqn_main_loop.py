@@ -3,7 +3,7 @@
 # @Time    : 2018/4/25 16:33
 # @Author  : Hanwei Zhu
 # @File    : drqn_main_loop.py
-
+import argparse
 import sys
 
 import matplotlib.pyplot as plt
@@ -17,8 +17,14 @@ from agents import agent
 def main(argv):
     # initialize
     env = environment.GameEnv()
-    print("weight is", const.WEIGHT)
-    const.initialize(3, 2)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--n_agents', type=int)
+    parser.add_argument('--sustainable_weight', type=float)
+    parsed_args = parser.parse_args()
+
+    const.initialize(state_space=3, action_space=2,
+                     n_agents=parsed_args.n_agents,
+                     weight=parsed_args.sustainable_weight)
     copy_step = 0
     scores = []
 
@@ -30,9 +36,9 @@ def main(argv):
         if players[0].epsilon <= const.EPSILON_MIN:
             break
 
+        env.reset()
         # shape: [Batch_size, Time step, State space]
         state = np.zeros((1, const.MAX_STEP, const.STATE_SPACE))
-        state[0][0] = np.asarray([env.reset()])
 
         rewards = [[] for _ in range(const.N_AGENTS)]
         actions = [[] for _ in range(const.N_AGENTS)]
@@ -42,7 +48,6 @@ def main(argv):
         score = 0
 
         for time in range(1, const.MAX_STEP):
-
             for index, player in enumerate(players):
                 action = player.choose_action(state)
 
@@ -69,14 +74,14 @@ def main(argv):
                 break
 
             terminate.append(False)
-            state[0][time] = np.reshape(next_state, [1, const.STATE_SPACE])
+            state[:, time, :] = np.reshape(next_state, [1, const.STATE_SPACE])
 
         score /= const.N_AGENTS
         print("episode: {}/{}, score: {}, e: {:.2}"
               .format(e, const.TRAINING_EPISODES, score, players[0].epsilon))
 
         [player.store_experience(state, actions[index], rewards[index], terminate)
-            for index, player in enumerate(players)]
+         for index, player in enumerate(players)]
 
         scores.append(score)
 
