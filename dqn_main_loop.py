@@ -88,12 +88,12 @@ def main(argv):
         player.save_model()
         player.sess.close()
 
+    plt.switch_backend('agg')
     plt.plot(avg_scores)
     plt.interactive(False)
     plt.xlabel('Epoch')
     plt.ylabel('Avg score')
     plt.savefig(const.LOG_PATH + 'training_plot')
-    plt.show()
 
 
 if __name__ == '__main__':

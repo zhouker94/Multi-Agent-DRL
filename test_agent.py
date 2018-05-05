@@ -70,6 +70,7 @@ def main(argv):
               .format(e, const.TRAINING_EPISODES, score, players[0].epsilon))
         scores.append(score)
 
+    plt.switch_backend('agg')
     plt.plot(resource_level)
     plt.interactive(False)
     plt.title("Time series weight=" + str(const.WEIGHT) + " agents=" + str(const.N_AGENTS))
@@ -77,7 +78,6 @@ def main(argv):
     plt.xlabel('Time')
     plt.ylim(0, 1000)
     plt.savefig(const.LOG_PATH + 'test_plot')
-    plt.show()
 
     with open(const.LOG_PATH + "test_log_with_weight_" + str(const.WEIGHT) + '.txt', "w+") as f:
         for r in resource_level:
