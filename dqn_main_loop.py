@@ -24,7 +24,7 @@ def main(argv):
     parser.add_argument('--sustainable_weight', type=float)
     parsed_args = parser.parse_args()
 
-    const.initialize(state_space=3, action_space=2, n_agents=parsed_args.n_agents, weight=parsed_args.sustainable_weight)
+    const.initialize(state_space=3, action_space=3, n_agents=parsed_args.n_agents, weight=parsed_args.sustainable_weight)
     copy_step = 0
     avg_scores = []
 
@@ -39,6 +39,7 @@ def main(argv):
         state = np.asarray([env.reset()])
         state = np.reshape(state, [1, const.STATE_SPACE])
 
+        # [Increase effort, Decrease effort, idle]
         actions = [0] * const.N_AGENTS
         efforts = [const.INIT_EFFORT] * const.N_AGENTS
         score = 0
@@ -46,15 +47,23 @@ def main(argv):
         for time in range(const.MAX_STEP):
             for index, player in enumerate(players):
                 action = player.choose_action(state)
+                actions[index] = action
+                
+                # increase
                 if action == 0:
                     efforts[index] += const.MIN_INCREMENT
-                else:
+                # decrease
+                elif action == 1:
                     efforts[index] -= const.MIN_INCREMENT
+
+                '''
+                # don't think following is useful
+
                 if efforts[index] < const.MIN_EFFORT:
                     efforts[index] = const.MIN_EFFORT
                 elif efforts[index] > const.MAX_EFFORT:
                     efforts[index] = const.MAX_EFFORT
-                actions[index] = action
+                '''
 
             resource, rewards, done = env.step(efforts)
             score += sum(rewards)
