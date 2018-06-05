@@ -1,16 +1,21 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Time    : 2018/4/25 15:09
+# @Author  : Hanwei Zhu
+# @File    : agent.py
+
 import os
 import random
 from collections import deque
-
 import numpy as np
 import tensorflow as tf
-
 import constants as const
 from agents import q_network, drq_network
+import pandas as pd
 from sklearn.preprocessing import Normalizer
 
 
-class DqnAgent(object):
+class BaseAgent(object):
     def __init__(self, name, epsilon=const.EPSILON_INIT, learning_rate=0.01, learning_mode=True):
         self._name = name
         self.epsilon = epsilon
@@ -23,6 +28,11 @@ class DqnAgent(object):
                                        shape=[None, const.STATE_SPACE])
         self._input_y = tf.placeholder(tf.float32,
                                        shape=[None, const.ACTION_SPACE])
+
+
+class DqnAgent(BaseAgent):
+    def __init__(self, name, epsilon=const.EPSILON_INIT, learning_rate=0.01, learning_mode=True):
+        super().__init__(name, epsilon, learning_rate, learning_mode)
         self._target_q = q_network.TargetQNetwork(scope=const.TARGET_Q_SCOPE + name,
                                                   inputs=(self._input_x, self._input_y))
         self._online_q = q_network.OnlineQNetwork(scope=const.ONLINE_Q_SCOPE + name,
@@ -60,7 +70,7 @@ class DqnAgent(object):
                 return 1
             else:
                 return 0
-            # return np.random.randint(const.ACTION_SPACE)
+                # return np.random.randint(const.ACTION_SPACE)
 
     def learn(self):
         # sample batch memory from all memory
@@ -119,19 +129,9 @@ class DqnAgent(object):
         self.sess.close()
 
 
-class DrqnAgent(object):
+class DrqnAgent(BaseAgent):
     def __init__(self, name, epsilon=const.EPSILON_INIT, learning_rate=0.01, learning_mode=True):
-        self._name = name
-        self.epsilon = epsilon
-        self.gamma = const.GAMMA
-        self._learning_rate = learning_rate
-        self._learning_mode = learning_mode
-        self.memory = deque(maxlen=const.MEMORY_SIZE)
-
-        self._input_x = tf.placeholder(tf.float32,
-                                       shape=[None, None, const.STATE_SPACE])
-        self._input_y = tf.placeholder(tf.float32,
-                                       shape=[None, None, const.ACTION_SPACE])
+        super().__init__(name, epsilon, learning_rate, learning_mode)
         self._dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
 
         self._target_q = drq_network.TargetDRQNetwork(scope=const.TARGET_Q_SCOPE + name,
@@ -176,7 +176,7 @@ class DrqnAgent(object):
                 return 1
             else:
                 return 0
-            # return np.random.randint(const.ACTION_SPACE)
+                # return np.random.randint(const.ACTION_SPACE)
 
     def learn(self):
         # sample batch memory from all memory

@@ -22,7 +22,7 @@ def main(argv):
     parser.add_argument('--sustainable_weight', type=float)
     parsed_args = parser.parse_args()
 
-    const.initialize(state_space=3, action_space=2,
+    const.initialize(state_space=3, action_space=3,
                      n_agents=parsed_args.n_agents,
                      weight=parsed_args.sustainable_weight)
     copy_step = 0

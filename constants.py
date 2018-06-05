@@ -92,16 +92,6 @@ def initialize(state_space, action_space, n_agents, weight):
     MAX_EFFORT = 500 / N_AGENTS
 
 
-# environment configuration
-RESOURCE_CAPACITY_N_MAX = 1000.0
-RESOURCE_CAPACITY_INIT = 1000.0
-
-REPLENISHMENT_RATE = 0.5
-
-ALPHA = 0.35
-BETA = 0.4
-COST_C = 0.5
-
 # important parameter in this project
 WEIGHT = 0.5
 
