@@ -32,19 +32,11 @@ class OnlineDRQNetwork(tsg.TFSubGraph):
                                                        )
 
     def implement_graph(self):
-        curr_inputs = self.inputs[0]
+        curr_inputs = tf.contrib.layers.layer_norm(self.inputs[0])
+        curr_inputs, h = tf.nn.dynamic_rnn(cell=self.rnn_layer, inputs=curr_inputs, dtype=tf.float32)
 
-        # normalize input layer
-        fc_mean, fc_var = tf.nn.moments(
-            curr_inputs,
-            axes=[0]
-        )
-        epsilon = 0.001
-        curr_inputs = tf.nn.batch_normalization(curr_inputs, fc_mean, fc_var, None, None, epsilon)
-
-        curr_inputs, _ = tf.nn.dynamic_rnn(cell=self.rnn_layer, inputs=curr_inputs, dtype=tf.float32)
-
-        self.outputs[const.Q_VALUE_OUTPUT] = curr_inputs
+        self.outputs[const.Q_VALUE_OUTPUT] = h
+        self.outputs[const.MAX_Q_OUTPUT] = tf.argmax(h)
 
         self.outputs[const.REDUCE_MEAN_LOSS] = tf.reduce_mean(tf.squared_difference(self.inputs[1],
                                                                                     self.outputs[const.Q_VALUE_OUTPUT]))

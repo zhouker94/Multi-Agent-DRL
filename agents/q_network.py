@@ -1,5 +1,10 @@
-import tensorflow as tf
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Time    : 2018/4/25 15:09
+# @Author  : Hanwei Zhu
+# @File    : q_network.py
 
+import tensorflow as tf
 import constants as const
 from agents import tf_sub_graph as tsg
 from agents.utils import Utils
@@ -46,6 +51,7 @@ class OnlineQNetwork(tsg.TFSubGraph):
                 curr_inputs = self.outputs[const.FULLCONN_OUTPUT + str(i)]
 
         self.outputs[const.Q_VALUE_OUTPUT] = curr_inputs
+        self.outputs[const.MAX_Q_OUTPUT] = tf.argmax(self.outputs[const.Q_VALUE_OUTPUT])
 
         self.outputs[const.REDUCE_MEAN_LOSS] = tf.reduce_mean(tf.squared_difference(self.inputs[1],
                                                                                     self.outputs[const.Q_VALUE_OUTPUT]))

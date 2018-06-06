@@ -23,11 +23,41 @@ class BaseAgent(object):
         self._learning_rate = learning_rate
         self._learning_mode = learning_mode
         self.memory = deque(maxlen=const.MEMORY_SIZE)
-
         self._input_x = tf.placeholder(tf.float32,
                                        shape=[None, const.STATE_SPACE])
         self._input_y = tf.placeholder(tf.float32,
                                        shape=[None, const.ACTION_SPACE])
+        self._dropout_keep_prob = tf.placeholder(dtype=tf.float32,
+                                                 shape=[],
+                                                 name='dropout_keep_prob')
+        self.saver = tf.train.Saver()
+        np.random.seed(seed=hash(self._name) % 256)
+
+        self._target_q = None
+        self._online_q = None
+        self.replace_target_op = None
+        self.sess = None
+
+    def choose_action(self, state):
+        action = self.sess.run(self._online_q.outputs[const.MAX_Q_OUTPUT],
+                               feed_dict={self._input_x: state})
+
+        if not self._learning_mode or random.random() >= self.epsilon:
+            return action
+        else:
+            return np.random.randint(const.ACTION_SPACE)
+
+    def update_target_q(self):
+        self.sess.run(self.replace_target_op)
+
+    def load(self):
+        self.saver.restore(self.sess, const.MODEL_SAVE_PATH + self._name)
+
+    def save_model(self):
+        if not os.path.exists(const.MODEL_SAVE_PATH):
+            os.makedirs(const.MODEL_SAVE_PATH)
+        save_path = self.saver.save(self.sess, const.MODEL_SAVE_PATH + self._name)
+        print("Model saved in path: %s" % save_path)
 
 
 class DqnAgent(BaseAgent):
@@ -41,36 +71,19 @@ class DqnAgent(BaseAgent):
         self._target_q.define_graph()
         self._online_q.define_graph()
 
-        target_q_weights = self._target_q.fullconn_weight + self._target_q.fullconn_bias
-        online_q_weights = self._online_q.fullconn_weight + self._online_q.fullconn_bias
-        self.replace_target_op = [tf.assign(t, o) for t, o in zip(target_q_weights, online_q_weights)]
+        target_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_q')
+        online_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='online_q')
 
-        # The rl_brain should hold a tf session
+        with tf.variable_scope('soft_replacement'):
+            self.replace_target_op = [tf.assign(t, o) for t, o in zip(target_params, online_params)]
+
         self.sess = tf.Session()
-
-        self.saver = tf.train.Saver()
-        # train_writer = tf.summary.FileWriter(const.LOG_PATH, sess.graph)
         if os.path.exists(const.MODEL_SAVE_PATH):
+            self.load()
             print("load successfully")
-            self.saver.restore(self.sess, const.MODEL_SAVE_PATH + self._name)
         else:
             init_op = tf.global_variables_initializer()
             self.sess.run(init_op)
-        np.random.seed(seed=hash(self._name) % 256)
-
-    def choose_action(self, state):
-        q_values = self.sess.run(self._online_q.outputs[const.Q_VALUE_OUTPUT],
-                                 feed_dict={self._input_x: state})
-
-        if not self._learning_mode or random.random() >= self.epsilon:
-            return np.argmax(q_values)
-        else:
-            # decrease the probability of taking "self-fish" action
-            if random.random() >= 0.4:
-                return 1
-            else:
-                return 0
-                # return np.random.randint(const.ACTION_SPACE)
 
     def learn(self):
         # sample batch memory from all memory
@@ -109,38 +122,20 @@ class DqnAgent(BaseAgent):
 
         self.epsilon -= const.EPSILON_DECAY
 
-    def update_target_q(self):
-        self.sess.run(self.replace_target_op)
-
     def store_experience(self, state, action, reward, next_state, done):
         transition = [state, action, np.asarray(reward), next_state, done]
         self.memory.append(transition)
-
-    def load(self, name):
-        pass
-
-    def save_model(self):
-        if not os.path.exists(const.MODEL_SAVE_PATH):
-            os.makedirs(const.MODEL_SAVE_PATH)
-        save_path = self.saver.save(self.sess, const.MODEL_SAVE_PATH + self._name)
-        print("Model saved in path: %s" % save_path)
-
-    def __exit__(self):
-        self.sess.close()
 
 
 class DrqnAgent(BaseAgent):
     def __init__(self, name, epsilon=const.EPSILON_INIT, learning_rate=0.01, learning_mode=True):
         super().__init__(name, epsilon, learning_rate, learning_mode)
-        self._dropout_keep_prob = tf.placeholder(dtype=tf.float32, shape=[], name='dropout_keep_prob')
-
         self._target_q = drq_network.TargetDRQNetwork(scope=const.TARGET_Q_SCOPE + name,
                                                       inputs=(self._input_x, self._input_y),
                                                       dropout_keep_prob=self._dropout_keep_prob)
         self._online_q = drq_network.OnlineDRQNetwork(scope=const.ONLINE_Q_SCOPE + name,
                                                       inputs=(self._input_x, self._input_y),
                                                       dropout_keep_prob=self._dropout_keep_prob)
-
         self._target_q.define_graph()
         self._online_q.define_graph()
 
@@ -171,12 +166,7 @@ class DrqnAgent(BaseAgent):
         if not self._learning_mode or random.random() >= self.epsilon:
             return np.argmax(q_values[:, -1, :], axis=1)
         else:
-            # decrease the probability of taking "self-fish" action
-            if random.random() >= 0.4:
-                return 1
-            else:
-                return 0
-                # return np.random.randint(const.ACTION_SPACE)
+            return np.random.randint(const.ACTION_SPACE)
 
     def learn(self):
         # sample batch memory from all memory
@@ -219,21 +209,14 @@ class DrqnAgent(BaseAgent):
 
         self.epsilon -= const.EPSILON_DECAY
 
-    def update_target_q(self):
-        self.sess.run(self.replace_target_op)
-
     def store_experience(self, state, actions, rewards, terminate):
         transition = (state, actions, rewards, terminate)
         self.memory.append(transition)
 
-    def load(self, name):
-        pass
 
-    def save_model(self):
-        if not os.path.exists(const.MODEL_SAVE_PATH):
-            os.makedirs(const.MODEL_SAVE_PATH)
-        save_path = self.saver.save(self.sess, const.MODEL_SAVE_PATH + self._name)
-        print("Model saved in path: %s" % save_path)
-
-    def __exit__(self):
-        self.sess.close()
+if __name__ == "__main__":
+    # formed data
+    const.initialize(state_space=4, action_space=3, n_agents=1, weight=0.5)
+    a = DqnAgent("DQN_test")
+    ac = a.choose_action([[0, 0, 0, 0]])
+    print(ac)
