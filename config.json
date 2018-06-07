@@ -1,0 +1,42 @@
+{
+  "game_config":{
+    "toy_env": "CartPole-v0",
+    "num_agents": 1,
+    "max_round": 300,
+    "train_epochs": 1000,
+    "test_epochs": 10,
+    "total_init_effort": 300,
+    "total_max_effort": 500,
+    "total_min_effort": 100,
+    "min_increment": 10,
+    "state_space": 4,
+    "action_space": 3
+  },
+  "dir_config":{
+    "log_path": "log/",
+    "model_save_path": "log/agent_model/",
+    "tensorboard_path": "log/graph/"
+  },
+  "dqn":{
+    "init_epsilon": 1.0,
+    "min_epsilon": 0.1,
+    "epsilon_decay": 0.001,
+    "gamma": 0.5,
+    "copy_step": 10,
+    "memory_size": 500,
+    "batch_size": 128,
+    "fully_connected_layer_1": 64,
+    "fully_connected_layer_2": 64,
+    "fully_connected_layer_3": 64,
+    "in_keep_prob": 0.8
+  },
+  "drqn":{
+    "init_epsilon": 1.0,
+    "min_epsilon": 0.1,
+    "epsilon_decay": 0.001,
+    "gamma": 0.5,
+    "copy_step": 10,
+    "memory_size": 500,
+    "batch_size": 128
+  }
+}
