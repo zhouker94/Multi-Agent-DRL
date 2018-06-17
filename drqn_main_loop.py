@@ -11,7 +11,7 @@ import numpy as np
 
 import constants as const
 import environment
-from agents import agent
+from agents import dqn_agent
 
 
 def main(argv):
@@ -30,7 +30,7 @@ def main(argv):
 
     players = []
     for player in range(const.N_AGENTS):
-        players.append(agent.DrqnAgent("DRQN_" + str(player)))
+        players.append(dqn_agent.DrqnAgent("DRQN_" + str(player)))
 
     for e in range(const.TRAINING_EPISODES):
         if players[0].epsilon <= const.EPSILON_MIN:
