@@ -114,19 +114,16 @@ class DqnAgent(BaseAgent):
             with tf.variable_scope('phi_net'):
                 phi_state_layer_1 = tf.layers.dense(self._state,
                                                     self.opt["fully_connected_layer_1_node_num"],
-                                                    tf.nn.relu,
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
                                                     activation=tf.nn.relu)
                 phi_state_layer_2 = tf.layers.dense(phi_state_layer_1,
                                                     self.opt["fully_connected_layer_2_node_num"],
-                                                    tf.nn.relu,
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
                                                     activation=tf.nn.relu)
                 phi_state_layer_3 = tf.layers.dense(phi_state_layer_2,
                                                     self.opt["fully_connected_layer_3_node_num"],
-                                                    tf.nn.relu,
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
                                                     activation=tf.nn.relu)
@@ -147,19 +144,16 @@ class DqnAgent(BaseAgent):
             with tf.variable_scope('phi_net'):
                 phi_state_next_layer_1 = tf.layers.dense(self._next_state,
                                                          self.opt["fully_connected_layer_1_node_num"],
-                                                         tf.nn.relu,
                                                          kernel_initializer=w_initializer,
                                                          bias_initializer=b_initializer,
                                                          activation=tf.nn.relu)
                 phi_state_next_layer_2 = tf.layers.dense(phi_state_next_layer_1,
                                                          self.opt["fully_connected_layer_2_node_num"],
-                                                         tf.nn.relu,
                                                          kernel_initializer=w_initializer,
                                                          bias_initializer=b_initializer,
                                                          activation=tf.nn.relu)
                 phi_state_next_layer_3 = tf.layers.dense(phi_state_next_layer_2,
                                                          self.opt["fully_connected_layer_3_node_num"],
-                                                         tf.nn.relu,
                                                          kernel_initializer=w_initializer,
                                                          bias_initializer=b_initializer,
                                                          activation=tf.nn.relu)
