@@ -19,26 +19,26 @@ def main():
 
     # -------------- parameters initialize --------------
 
-    env = environment.GameEnv()
     parser = argparse.ArgumentParser()
-    parser.add_argument('--n_agents', type=int)
-    parser.add_argument('--sustainable_weight', type=float)
+    parser.add_argument('--n_agents', type=int, default=1)
+    parser.add_argument('--sustainable_weight', type=float, default=0.5)
     parsed_args = parser.parse_args()
 
     conf = json.load(open('config.json', 'r'))
     env_conf = conf["game_config"]
     env_conf["sustain_weight"] = parsed_args.sustainable_weight
     env_conf["num_agents"] = parsed_args.n_agents
+    env = environment.GameEnv(env_conf["sustain_weight"])
 
     dir_conf, opt = conf["dir_config"], conf["dqn"]
-
+    
     agent_list = [agent.DqnAgent("DQN_" + str(i), opt)
                   for i in range(env_conf["num_agents"])]
 
     # -------------- start training --------------
-
-    for a in agent_list:
-        a.start(dir_path=dir_conf["model_save_path"])
+    
+    for player in agent_list:
+        player.start(dir_path=dir_conf["model_save_path"])
 
     avg_scores = []
     global_step = 0
@@ -47,18 +47,18 @@ def main():
         if agent_list[0].epsilon <= opt["min_epsilon"]:
             break
 
-        # state -> [X, Pi, x, pi]
-        state = np.asarray([env.reset()])
-        state = np.reshape(state, [1, opt["state_space"]])
+        # state -> [X, Pi]
+        state = env.reset()
 
-        # actions -> [Increase effort, Decrease effort, IDLE]
-        actions = [0] * env_conf["num_agents"]
         efforts = [env_conf["total_init_effort"] / env_conf["num_agents"]] * env_conf["num_agents"]
         score = 0
 
         for time in range(env_conf["max_round"]):
+            # actions -> [Increase effort, Decrease effort, IDLE]
+            actions = [0] * env_conf["num_agents"]
+            
             for index, player in enumerate(agent_list):
-                action = player.choose_action(state)
+                action = player.choose_action(np.expand_dims(state, axis=0))
                 actions[index] = action
 
                 # increase
@@ -67,10 +67,13 @@ def main():
                 # decrease
                 elif action == 1:
                     efforts[index] -= env_conf["min_increment"]
+                
+                if efforts[index] <= 1:
+                    efforts[index] = 1
 
-            resource, rewards, done = env.step(efforts)
+            next_state, rewards, done = env.step(efforts)
             score += sum(rewards)
-            next_state = np.reshape([resource], [1, opt["state_space"]])
+            
             [player.save_transition(state, actions[index], rewards[index], next_state)
              for index, player in enumerate(agent_list)]
             state = next_state
@@ -87,6 +90,7 @@ def main():
               .format(epoch, env_conf["train_epochs"], score, agent_list[0].epsilon))
         avg_scores.append(score)
 
+    dir_conf["model_save_path"] = dir_conf["model_save_path"] + str(env_conf["sustain_weight"]) + str(env_conf["num_agents"]) + '/'
     for a in agent_list:
         a.save(dir_path=dir_conf["model_save_path"])
         a.sess.close()

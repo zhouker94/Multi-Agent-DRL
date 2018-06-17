@@ -4,7 +4,6 @@
 # @Author  : Hanwei Zhu
 # @File    : environment.py
 
-import constants as const
 
 RESOURCE_CAPACITY_N_MAX = 1000.0
 RESOURCE_CAPACITY_INIT = 1000.0
@@ -15,7 +14,8 @@ COST_C = 0.5
 
 
 class GameEnv(object):
-    def __init__(self):
+    def __init__(self, w):
+        self._w = w
         print("Game start!")
         self.common_resource_pool = RESOURCE_CAPACITY_INIT
 
@@ -28,8 +28,7 @@ class GameEnv(object):
     def harvest_func(effort, n):
         return BETA * (effort ** ALPHA) * (n ** (1 - ALPHA))
 
-    @staticmethod
-    def reward_func(delta_n, pi_list):
+    def reward_func(self, delta_n, pi_list):
         rewards = []
 
         if delta_n > 0:
@@ -46,7 +45,7 @@ class GameEnv(object):
                 wealth_goal = 0
             else:
                 wealth_goal = -1
-            r = const.WEIGHT * sustainability_goal + (1 - const.WEIGHT) * wealth_goal
+            r = self._w * sustainability_goal + (1 - self._w) * wealth_goal
             rewards.append(r)
 
         return rewards
@@ -65,8 +64,8 @@ class GameEnv(object):
         if self.common_resource_pool <= 0:
             game_is_done = True
 
-        return (effort_sum, sum(pi_list)), self.reward_func(delta_n, pi_list), game_is_done
+        return [effort_sum, sum(pi_list)], self.reward_func(delta_n, pi_list), game_is_done
 
     def reset(self):
-        self.common_resource_pool = const.RESOURCE_CAPACITY_INIT
-        return self.common_resource_pool, 0, 0
+        self.common_resource_pool = RESOURCE_CAPACITY_INIT
+        return [0.0, 0.0]

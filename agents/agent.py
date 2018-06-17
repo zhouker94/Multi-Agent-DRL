@@ -8,6 +8,7 @@ import os
 import random
 import numpy as np
 import tensorflow as tf
+from abc import abstractmethod
 
 
 class BaseAgent(object):
@@ -35,17 +36,26 @@ class BaseAgent(object):
                                                  shape=[],
                                                  name='dropout_keep_prob')
 
-        self.saver = tf.train.Saver()
-        self.init_op = tf.global_variables_initializer()
-
         self.update_q_net = None
         self.q_values_predict = None
-
+        
         self._build_model()
-        self.sess = tf.Session()
         self.merged = tf.summary.merge_all()
-        self.writer = tf.summary.FileWriter(opt["summary_path"] + self._name, self.sess.graph)
+        self.init_op = tf.global_variables_initializer()
+        self.sess = tf.Session()
+        self.saver = tf.train.Saver()
+        self.writer = tf.summary.FileWriter(self.opt["summary_path"] + self._name + '/', self.sess.graph)
         np.random.seed(seed=hash(self._name) % 256)
+
+    def start(self, dir_path):
+        """
+        Start: new/load a session
+        """
+        if os.path.exists(dir_path + self._name):
+            self.saver.restore(self.sess, dir_path + self._name)
+            print("load successfully")
+        else:
+            self.sess.run(self.init_op)
 
     def choose_action(self, state):
         """
@@ -58,7 +68,7 @@ class BaseAgent(object):
             action = np.random.randint(self.opt["action_space"])
         return action
 
-    @abs
+    @abstractmethod
     def _build_model(self):
         """
         Build nn model. All subclass should override this function
@@ -71,24 +81,14 @@ class BaseAgent(object):
         """
         self.sess.run(self.update_q_net)
 
-    def start(self, dir_path):
-        """
-        Start: new/load a session
-        """
-        self.sess = tf.Session()
-        if os.path.exists(dir_path):
-            self.saver.restore(self.sess, dir_path + self._name)
-            print("load successfully")
-        else:
-            self.sess.run(self.init_op)
-
+    
     def save(self, dir_path):
         """
         Save tensorflow model
         """
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        save_path = self.saver.save(self.sess, dir_path + self._name)
+        if not os.path.exists(dir_path + self._name):
+            os.makedirs(dir_path + self._name)
+        save_path = self.saver.save(self.sess, dir_path + self._name + '/' + self._name)
         print("Model saved in path: %s" % save_path)
 
     def save_transition(self, state, action, reward, state_next):
@@ -104,15 +104,16 @@ class BaseAgent(object):
 class DqnAgent(BaseAgent):
     def __init__(self, name, opt, learning_mode=True):
         super().__init__(name, opt, learning_mode)
-
+        
     def _build_model(self):
         # w, b initializer
         w_initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
         b_initializer = tf.constant_initializer(0.1)
 
         with tf.variable_scope('eval_net_' + self._name):
+            norm_state = tf.contrib.layers.layer_norm(self._state)
             with tf.variable_scope('phi_net'):
-                phi_state_layer_1 = tf.layers.dense(self._state,
+                phi_state_layer_1 = tf.layers.dense(norm_state,
                                                     self.opt["fully_connected_layer_1_node_num"],
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
@@ -141,8 +142,9 @@ class DqnAgent(BaseAgent):
                 self.q_value_predict = tf.gather_nd(self.q_values_predict, action_indices)
 
         with tf.variable_scope('target_net_' + self._name):
+            norm_next_state = tf.contrib.layers.layer_norm(self._next_state)
             with tf.variable_scope('phi_net'):
-                phi_state_next_layer_1 = tf.layers.dense(self._next_state,
+                phi_state_next_layer_1 = tf.layers.dense(norm_next_state,
                                                          self.opt["fully_connected_layer_1_node_num"],
                                                          kernel_initializer=w_initializer,
                                                          bias_initializer=b_initializer,
@@ -180,7 +182,7 @@ class DqnAgent(BaseAgent):
         eval_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="eval_net_" + self._name)
 
         with tf.variable_scope('soft_replacement'):
-            self.replace_target_op = [tf.assign(t, e) for t, e in zip(target_params, eval_params)]
+            self.update_q_net = [tf.assign(t, e) for t, e in zip(target_params, eval_params)]
 
     def learn(self, global_step):
         # sample batch memory from all memory
@@ -194,9 +196,9 @@ class DqnAgent(BaseAgent):
         batch_a = batch[:, self.opt["state_space"]]
         batch_r = batch[:, self.opt["state_space"] + 1]
         batch_s_n = batch[:, -self.opt["state_space"]:]
-
-        _, cost, summaries = self.sess.run(
-            [self.train_op, self.loss, self.merged],
+        
+        _, cost = self.sess.run(
+            [self.train_op, self.loss],
             feed_dict={
                 self._state: batch_s,
                 self._action: batch_a,
@@ -206,7 +208,7 @@ class DqnAgent(BaseAgent):
         )
 
         self.epsilon -= self.opt["epsilon_decay"]
-        self.writer.add_summary(summaries, global_step)
+        # self.writer.add_summary(summaries, global_step)
 
         if not global_step % 100:
             self.update_q()
