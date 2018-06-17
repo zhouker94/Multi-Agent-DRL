@@ -6,8 +6,8 @@
 # @Software: PyCharm Community Edition
 
 
-import sys
 import matplotlib.pyplot as plt
+import tensorflow as tf
 import numpy as np
 import environment
 from agents import agent
@@ -15,8 +15,9 @@ import argparse
 import json
 
 
-def main(argv):
-    # --------------parameters initialize--------------
+def main():
+
+    # -------------- parameters initialize --------------
 
     env = environment.GameEnv()
     parser = argparse.ArgumentParser()
@@ -25,16 +26,22 @@ def main(argv):
     parsed_args = parser.parse_args()
 
     conf = json.load(open('config.json', 'r'))
-    env_conf, dir_conf, opt = conf["game_config"], conf["dir_config"], conf["dqn"]
+    env_conf = conf["game_config"]
     env_conf["sustain_weight"] = parsed_args.sustainable_weight
     env_conf["num_agents"] = parsed_args.n_agents
+
+    dir_conf, opt = conf["dir_config"], conf["dqn"]
 
     agent_list = [agent.DqnAgent("DQN_" + str(i), opt)
                   for i in range(env_conf["num_agents"])]
 
-    # --------------start training--------------
+    # -------------- start training --------------
+
+    for a in agent_list:
+        a.start(dir_path=dir_conf["model_save_path"])
 
     avg_scores = []
+    global_step = 0
     for epoch in range(env_conf["train_epochs"]):
 
         if agent_list[0].epsilon <= opt["min_epsilon"]:
@@ -42,7 +49,7 @@ def main(argv):
 
         # state -> [X, Pi, x, pi]
         state = np.asarray([env.reset()])
-        state = np.reshape(state, [1, env_conf["state_space"]])
+        state = np.reshape(state, [1, opt["state_space"]])
 
         # actions -> [Increase effort, Decrease effort, IDLE]
         actions = [0] * env_conf["num_agents"]
@@ -63,13 +70,17 @@ def main(argv):
 
             resource, rewards, done = env.step(efforts)
             score += sum(rewards)
-            next_state = np.reshape([resource], [1, env_conf["state_space"]])
-            [player.store_experience(state, actions[index], rewards[index], next_state, done)
+            next_state = np.reshape([resource], [1, opt["state_space"]])
+            [player.save_transition(state, actions[index], rewards[index], next_state)
              for index, player in enumerate(agent_list)]
             state = next_state
 
             if done:
                 break
+
+            global_step += 1
+            if not global_step % 100:
+                [player.learn(global_step) for player in agent_list]
 
         score /= env_conf["num_agents"]
         print("episode: {}/{}, score: {}, e: {:.2}"
@@ -77,7 +88,7 @@ def main(argv):
         avg_scores.append(score)
 
     for a in agent_list:
-        a.save_model()
+        a.save(dir_path=dir_conf["model_save_path"])
         a.sess.close()
 
     plt.switch_backend('agg')
@@ -89,4 +100,4 @@ def main(argv):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main()
