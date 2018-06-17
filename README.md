@@ -1,5 +1,5 @@
-# Research project
-Deep Q learning in Common Pool Resource game (CPRg)
+# Deep Reinforcement Learning in CPRg
+Deep Reinforcement Learning in Common Pool Resource game (CPRg)
 
 ## References:
 - von der Osten F B, Kirley M, Miller T. Sustainability is possible despite greed-Exploring the nexus between profitability and sustainability in common pool resource systems[J]. Scientific reports, 2017, 7(1): 2307.
