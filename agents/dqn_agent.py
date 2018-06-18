@@ -43,7 +43,7 @@ class DqnAgent(base_agent.BaseAgent):
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
                                                     name='Q_predict')
-            tf.summary.histogram('q_values_predict', self.q_values_predict)
+            # tf.summary.histogram('q_values_predict', self.q_values_predict)
 
             with tf.variable_scope('q_predict'):
                 # size of q_value_predict is [BATCH_SIZE, 1]

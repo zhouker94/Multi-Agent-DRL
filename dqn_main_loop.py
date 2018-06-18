@@ -81,15 +81,16 @@ def main():
                 state = next_state
 
                 global_step += 1
-                if not global_step % 100:
-                    [player.learn(global_step) for player in agent_list]
 
                 if done:
                     break
 
+            [player.learn(global_step) for player in agent_list]
             score /= env_conf["num_agents"]
+            '''
             print("episode: {}/{}, score: {}, e: {:.2}"
                   .format(epoch, env_conf["train_epochs"], score, agent_list[0].epsilon))
+            '''
             avg_scores.append(score)
 
         dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
@@ -168,6 +169,11 @@ def main():
         plt.ylabel('Avg score')
         plt.savefig(dir_conf["model_save_path"] + 'test_plot')
 
+    # -------------- save result --------------
+    
+    with open(dir_conf["model_save_path"] + 'avg_score.txt', "w+") as f:
+        for r in avg_scores:
+            f.write(str(r) + '\n')
 
 if __name__ == '__main__':
     main()
