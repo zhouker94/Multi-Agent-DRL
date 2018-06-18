@@ -12,10 +12,10 @@
   },
   "dir_config":{
     "log_path": "log/",
-    "model_save_path": "log/agent_model/",
+    "model_save_path": "log/agent_model/"
   },
   "dqn":{
-    "state_space": 4,
+    "state_space": 2,
     "action_space": 3,
     "learning_rate": 0.001,
     "init_epsilon": 1.0,
