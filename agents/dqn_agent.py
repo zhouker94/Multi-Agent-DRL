@@ -20,9 +20,11 @@ class DqnAgent(base_agent.BaseAgent):
         b_initializer = tf.constant_initializer(0.1)
 
         with tf.variable_scope('eval_net_' + self._name):
-            norm_state = tf.contrib.layers.layer_norm(self._state)
+            batch_norm_state = tf.layers.batch_normalization(self._state)
+            layer_norm_state = tf.contrib.layers.layer_norm(batch_norm_state)
+            
             with tf.variable_scope('phi_net'):
-                phi_state_layer_1 = tf.layers.dense(norm_state,
+                phi_state_layer_1 = tf.layers.dense(layer_norm_state,
                                                     self.opt["fully_connected_layer_1_node_num"],
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
@@ -51,9 +53,11 @@ class DqnAgent(base_agent.BaseAgent):
                 self.q_value_predict = tf.gather_nd(self.q_values_predict, action_indices)
 
         with tf.variable_scope('target_net_' + self._name):
-            norm_next_state = tf.contrib.layers.layer_norm(self._next_state)
+            batch_norm_next_state = tf.layers.batch_normalization(self._next_state)
+            layer_norm_next_state = tf.contrib.layers.layer_norm(batch_norm_next_state)
+
             with tf.variable_scope('phi_net'):
-                phi_state_next_layer_1 = tf.layers.dense(norm_next_state,
+                phi_state_next_layer_1 = tf.layers.dense(layer_norm_next_state,
                                                          self.opt["fully_connected_layer_1_node_num"],
                                                          kernel_initializer=w_initializer,
                                                          bias_initializer=b_initializer,

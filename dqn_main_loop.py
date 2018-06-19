@@ -84,8 +84,10 @@ def main():
 
                 if done:
                     break
-
-            [player.learn(global_step) for player in agent_list]
+            
+            if not epoch % 2:
+                [player.learn(global_step) for player in agent_list]
+                
             score /= env_conf["num_agents"]
             '''
             print("episode: {}/{}, score: {}, e: {:.2}"
