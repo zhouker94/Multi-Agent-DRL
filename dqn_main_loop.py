@@ -150,16 +150,18 @@ def main():
                         efforts[index] = 1
 
                 next_state, rewards, done = env.step(efforts)
-                score += sum(rewards)
-
+                score = sum(rewards)
+                score /= env_conf["num_agents"]
+                avg_scores.append(score)
                 state = next_state
-
+                
                 global_step += 1
+                
+                if done:
+                    break
 
-            score /= env_conf["num_agents"]
             print("episode: {}/{}, score: {}, e: {:.2}"
                   .format(epoch, env_conf["test_epochs"], score, agent_list[0].epsilon))
-            avg_scores.append(score)
 
         for a in agent_list:
             a.sess.close()
