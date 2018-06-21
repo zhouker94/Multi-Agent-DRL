@@ -1,4 +1,4 @@
-# Multi-agent DRL with Tensorflow
+# Multi-agent DRL
 Deep Reinforcement Learning in multi-agent Common Pool Resource game (CPRg), implemented using Tensorflow.
 
 ## Introduction
@@ -9,7 +9,7 @@ Natural renewable resources, such as groundwater, fisheries and forest resources
 
 ## DQN Model Architecture
 
-The model basically derives from [2], but excludes CNN layer.
+The model basically derives from [2].
 
 ![dqn_nn](res/dqn_nn.png)
 

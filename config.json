@@ -42,6 +42,8 @@
     "copy_step": 10,
     "memory_size": 500,
     "batch_size": 128,
+    "gru_layer_num": 3,
+    "gru_nodes_nums":[32, 32, 32],
     "summary_path": "log/drqn_graph/"
   }
 }
