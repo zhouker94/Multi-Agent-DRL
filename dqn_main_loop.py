@@ -16,7 +16,6 @@ import json
 
 
 def main():
-
     # -------------- parameters initialize --------------
 
     parser = argparse.ArgumentParser()
@@ -32,6 +31,9 @@ def main():
     env = environment.GameEnv(env_conf["sustain_weight"])
 
     dir_conf, opt = conf["dir_config"], conf["dqn"]
+    dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
+                                  str(env_conf["sustain_weight"]) + '_' + \
+                                  str(env_conf["num_agents"]) + '/'
 
     avg_scores = []
     global_step = 0
@@ -84,10 +86,10 @@ def main():
 
                 if done:
                     break
-            
+
             if not epoch % 2:
                 [player.learn(global_step) for player in agent_list]
-                
+
             score /= env_conf["num_agents"]
             '''
             print("episode: {}/{}, score: {}, e: {:.2}"
@@ -95,20 +97,21 @@ def main():
             '''
             avg_scores.append(score)
 
-        dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
-                                      str(env_conf["sustain_weight"]) + '_' + \
-                                      str(env_conf["num_agents"]) + '/'
-
         for a in agent_list:
             a.save(dir_path=dir_conf["model_save_path"])
             a.sess.close()
 
+        # -------------- save results --------------
         plt.switch_backend('agg')
         plt.plot(avg_scores)
         plt.interactive(False)
         plt.xlabel('Epoch')
         plt.ylabel('Avg score')
         plt.savefig(dir_conf["model_save_path"] + 'training_plot')
+
+        with open(dir_conf["model_save_path"] + 'avg_score.txt', "w+") as f:
+            for r in avg_scores:
+                f.write(str(r) + '\n')
 
     # -------------- start test mode --------------
     else:
@@ -118,6 +121,7 @@ def main():
             player.start(dir_path=dir_conf["model_save_path"])
             agent_list.append(player)
 
+        resource_level = []
         for epoch in range(1):
             # state -> [X, Pi]
             state = env.reset()
@@ -126,6 +130,8 @@ def main():
             score = 0
 
             for time in range(env_conf["max_round"]):
+                resource_level.append(env.common_resource_pool)
+
                 # actions -> [Increase effort, Decrease effort, IDLE]
                 actions = [0] * env_conf["num_agents"]
 
@@ -146,8 +152,6 @@ def main():
                 next_state, rewards, done = env.step(efforts)
                 score += sum(rewards)
 
-                [player.save_transition(state, actions[index], rewards[index], next_state)
-                 for index, player in enumerate(agent_list)]
                 state = next_state
 
                 global_step += 1
@@ -157,13 +161,10 @@ def main():
                   .format(epoch, env_conf["test_epochs"], score, agent_list[0].epsilon))
             avg_scores.append(score)
 
-        dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
-                                      str(env_conf["sustain_weight"]) + '_' + \
-                                      str(env_conf["num_agents"]) + '/'
-
         for a in agent_list:
             a.sess.close()
 
+        # -------------- save results --------------
         plt.switch_backend('agg')
         plt.plot(avg_scores)
         plt.interactive(False)
@@ -171,11 +172,13 @@ def main():
         plt.ylabel('Avg score')
         plt.savefig(dir_conf["model_save_path"] + 'test_plot')
 
-    # -------------- save result --------------
-    
-    with open(dir_conf["model_save_path"] + 'avg_score.txt', "w+") as f:
-        for r in avg_scores:
-            f.write(str(r) + '\n')
+        with open(dir_conf["model_save_path"] + 'test_avg_score.txt', "w+") as f:
+            for r in avg_scores:
+                f.write(str(r) + '\n')
+
+        with open(dir_conf["model_save_path"] + "test_resource_level.txt", "w+") as f:
+            for r in resource_level:
+                f.write(str(r) + '\n')
 
 if __name__ == '__main__':
     main()
