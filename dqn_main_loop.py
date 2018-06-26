@@ -7,7 +7,6 @@
 
 
 import matplotlib.pyplot as plt
-import tensorflow as tf
 import numpy as np
 import environment
 from agents import dqn_agent
@@ -25,15 +24,17 @@ def main():
     parsed_args = parser.parse_args()
 
     conf = json.load(open('config.json', 'r'))
-    env_conf = conf["game_config"]
+    training_conf = conf["training_config"]
+
+    env_conf = conf["env_config"]
     env_conf["sustain_weight"] = parsed_args.sustainable_weight
     env_conf["num_agents"] = parsed_args.n_agents
-    env = environment.GameEnv(env_conf["sustain_weight"])
+    env = environment.GameEnv(env_conf)
 
     dir_conf, opt = conf["dir_config"], conf["dqn"]
     dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
                                   str(env_conf["sustain_weight"]) + '_' + \
-                                  str(env_conf["num_agents"]) + '/'
+                                  str(training_conf["num_agents"]) + '/'
 
     avg_scores = []
     global_step = 0
@@ -42,24 +43,24 @@ def main():
     if not parsed_args.is_test:
 
         agent_list = []
-        for i in range(env_conf["num_agents"]):
+        for i in range(training_conf["num_agents"]):
             player = dqn_agent.DqnAgent("DQN_" + str(i), opt)
             player.start(dir_path=dir_conf["model_save_path"])
             agent_list.append(player)
 
-        for epoch in range(env_conf["train_epochs"]):
+        for epoch in range(training_conf["train_epochs"]):
             if agent_list[0].epsilon <= opt["min_epsilon"]:
                 break
 
             # state -> [X, Pi]
             state = env.reset()
 
-            efforts = [env_conf["total_init_effort"] / env_conf["num_agents"]] * env_conf["num_agents"]
+            efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf["num_agents"]
             score = 0
 
-            for time in range(env_conf["max_round"]):
+            for time in range(training_conf["max_round"]):
                 # actions -> [Increase effort, Decrease effort, IDLE]
-                actions = [0] * env_conf["num_agents"]
+                actions = [0] * training_conf["num_agents"]
 
                 for index, player in enumerate(agent_list):
                     action = player.choose_action(np.expand_dims(state, axis=0))
@@ -67,10 +68,10 @@ def main():
 
                     # increase
                     if action == 0:
-                        efforts[index] += env_conf["min_increment"]
+                        efforts[index] += training_conf["min_increment"]
                     # decrease
                     elif action == 1:
-                        efforts[index] -= env_conf["min_increment"]
+                        efforts[index] -= training_conf["min_increment"]
 
                     if efforts[index] <= 1:
                         efforts[index] = 1
@@ -90,7 +91,7 @@ def main():
             if not epoch % 2:
                 [player.learn(global_step) for player in agent_list]
 
-            score /= env_conf["num_agents"]
+            score /= training_conf["num_agents"]
             '''
             print("episode: {}/{}, score: {}, e: {:.2}"
                   .format(epoch, env_conf["train_epochs"], score, agent_list[0].epsilon))
@@ -116,7 +117,7 @@ def main():
     # -------------- start test mode --------------
     else:
         agent_list = []
-        for i in range(env_conf["num_agents"]):
+        for i in range(training_conf["num_agents"]):
             player = dqn_agent.DqnAgent("DQN_" + str(i), opt, learning_mode=False)
             player.start(dir_path=dir_conf["model_save_path"])
             agent_list.append(player)
@@ -126,14 +127,14 @@ def main():
             # state -> [X, Pi]
             state = env.reset()
 
-            efforts = [env_conf["total_init_effort"] / env_conf["num_agents"]] * env_conf["num_agents"]
+            efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf["num_agents"]
             score = 0
 
-            for time in range(env_conf["max_round"]):
+            for time in range(training_conf["max_round"]):
                 resource_level.append(env.common_resource_pool)
 
                 # actions -> [Increase effort, Decrease effort, IDLE]
-                actions = [0] * env_conf["num_agents"]
+                actions = [0] * training_conf["num_agents"]
 
                 for index, player in enumerate(agent_list):
                     action = player.choose_action(np.expand_dims(state, axis=0))
@@ -141,27 +142,27 @@ def main():
 
                     # increase
                     if action == 0:
-                        efforts[index] += env_conf["min_increment"]
+                        efforts[index] += training_conf["min_increment"]
                     # decrease
                     elif action == 1:
-                        efforts[index] -= env_conf["min_increment"]
+                        efforts[index] -= training_conf["min_increment"]
 
                     if efforts[index] <= 1:
                         efforts[index] = 1
 
                 next_state, rewards, done = env.step(efforts)
                 score = sum(rewards)
-                score /= env_conf["num_agents"]
+                score /= training_conf["num_agents"]
                 avg_scores.append(score)
                 state = next_state
-                
+
                 global_step += 1
-                
+
                 if done:
                     break
 
             print("episode: {}/{}, score: {}, e: {:.2}"
-                  .format(epoch, env_conf["test_epochs"], score, agent_list[0].epsilon))
+                  .format(epoch, training_conf["test_epochs"], score, agent_list[0].epsilon))
 
         for a in agent_list:
             a.sess.close()
@@ -181,6 +182,7 @@ def main():
         with open(dir_conf["model_save_path"] + "test_resource_level.txt", "w+") as f:
             for r in resource_level:
                 f.write(str(r) + '\n')
+
 
 if __name__ == '__main__':
     main()

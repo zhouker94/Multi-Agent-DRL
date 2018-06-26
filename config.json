@@ -1,5 +1,5 @@
 {
-  "game_config":{
+  "training_config":{
     "toy_env": "CartPole-v0",
     "num_agents": 1,
     "max_round": 300,
