@@ -10,6 +10,14 @@
     "total_min_effort": 100,
     "min_increment": 10
   },
+  "env_config":{
+    "resource_capacity_n_max": 1000.0,
+    "resource_capacity_init": 1000.0,
+    "replenishment_rate": 0.5,
+    "alpha": 0.35,
+    "beta": 0.4,
+    "cost_c": 0.5
+  },
   "dir_config":{
     "log_path": "log/",
     "model_save_path": "log/agent_model/"
