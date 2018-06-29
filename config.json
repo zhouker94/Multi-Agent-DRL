@@ -53,5 +53,22 @@
     "gru_layer_num": 3,
     "gru_nodes_nums":[32, 32, 32],
     "summary_path": "log/drqn_graph/"
+  },
+  "pg":{
+    "state_space": 2,
+    "action_space": 3,
+    "learning_rate": 0.001,
+    "init_epsilon": 1.0,
+    "min_epsilon": 0.1,
+    "epsilon_decay": 0.003,
+    "gamma": 0.5,
+    "copy_step": 10,
+    "memory_size": 500,
+    "batch_size": 128,
+    "fully_connected_layer_1_node_num": 32,
+    "fully_connected_layer_2_node_num": 32,
+    "fully_connected_layer_3_node_num": 32,
+    "in_keep_prob": 0.8,
+    "summary_path": "log/pg_graph/"
   }
 }

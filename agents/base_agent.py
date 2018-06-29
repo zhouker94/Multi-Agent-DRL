@@ -21,10 +21,6 @@ class BaseAgent(object):
         self._learning_rate = self.opt["learning_rate"]
         self._learning_mode = learning_mode
 
-        self.buffer = np.zeros((self.opt["memory_size"],
-                                self.opt["state_space"] + 1 + 1 + self.opt["state_space"]))
-        self.buffer_count = 0
-
         self._state = tf.placeholder(tf.float32,
                                      shape=[None, self.opt["state_space"]],
                                      name='input_state')
@@ -37,9 +33,7 @@ class BaseAgent(object):
                                                  shape=[],
                                                  name='dropout_keep_prob')
 
-        self.update_q_net = None
-        self.q_values_predict = None
-
+        self.action_output = None
         self._build_model()
         self.merged = tf.summary.merge_all()
         self.init_op = tf.global_variables_initializer()
@@ -63,7 +57,7 @@ class BaseAgent(object):
         Choose an action
         """
         if not self._learning_mode or random.random() >= self.epsilon:
-            action = np.argmax(self.sess.run(self.q_values_predict,
+            action = np.argmax(self.sess.run(self.action_output,
                                              feed_dict={self._state: state}))
         else:
             action = np.random.randint(self.opt["action_space"])
@@ -76,11 +70,9 @@ class BaseAgent(object):
         """
         pass
 
-    def update_q(self):
-        """
-        Copy weights from eval_net to target_net
-        """
-        self.sess.run(self.update_q_net)
+    @abstractmethod
+    def learn(self, global_step):
+        pass
 
     def save(self, dir_path):
         """
@@ -90,12 +82,3 @@ class BaseAgent(object):
             os.makedirs(dir_path + self._name)
         save_path = self.saver.save(self.sess, dir_path + self._name + '/' + self._name)
         print("Model saved in path: %s" % save_path)
-
-    def save_transition(self, state, action, reward, state_next):
-        """
-        Save transition to buffer
-        """
-        transition = np.hstack((state, [action, reward], state_next))
-        index = self.buffer_count % self.opt["memory_size"]
-        self.buffer[index, :] = transition
-        self.buffer_count += 1

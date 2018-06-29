@@ -13,6 +13,9 @@ from agents import base_agent
 class DqnAgent(base_agent.BaseAgent):
     def __init__(self, name, opt, learning_mode=True):
         super().__init__(name, opt, learning_mode)
+        self.buffer = np.zeros((self.opt["memory_size"],
+                                self.opt["state_space"] + 1 + 1 + self.opt["state_space"]))
+        self.buffer_count = 0
 
     def _build_model(self):
         # w, b initializer
@@ -22,7 +25,7 @@ class DqnAgent(base_agent.BaseAgent):
         with tf.variable_scope('eval_net_' + self._name):
             batch_norm_state = tf.layers.batch_normalization(self._state)
             layer_norm_state = tf.contrib.layers.layer_norm(batch_norm_state)
-            
+
             with tf.variable_scope('phi_net'):
                 phi_state_layer_1 = tf.layers.dense(layer_norm_state,
                                                     self.opt["fully_connected_layer_1_node_num"],
@@ -51,6 +54,7 @@ class DqnAgent(base_agent.BaseAgent):
                 # size of q_value_predict is [BATCH_SIZE, 1]
                 action_indices = tf.stack([tf.range(tf.shape(self._action)[0], dtype=tf.int32), self._action], axis=1)
                 self.q_value_predict = tf.gather_nd(self.q_values_predict, action_indices)
+                self.action_output = tf.arg_max(self.q_value_predict)
 
         with tf.variable_scope('target_net_' + self._name):
             batch_norm_next_state = tf.layers.batch_normalization(self._next_state)
@@ -125,3 +129,18 @@ class DqnAgent(base_agent.BaseAgent):
 
         if not global_step % 100:
             self.update_q()
+
+    def save_transition(self, state, action, reward, state_next):
+        """
+        Save transition to buffer
+        """
+        transition = np.hstack((state, [action, reward], state_next))
+        index = self.buffer_count % self.opt["memory_size"]
+        self.buffer[index, :] = transition
+        self.buffer_count += 1
+
+    def update_q(self):
+        """
+        Copy weights from eval_net to target_net
+        """
+        self.sess.run(self.update_q_net)
