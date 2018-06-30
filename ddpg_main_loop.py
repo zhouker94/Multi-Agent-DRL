@@ -6,14 +6,6 @@
 # @Software: PyCharm Community Edition
 
 
-# -*- coding: utf-8 -*-
-# @Time    : 2018/3/5 下午1:53
-# @Author  : Hanwei Zhu
-# @Email   : hanweiz@student.unimelb.edu.au
-# @File    : dqn_main_loop.py
-# @Software: PyCharm Community Edition
-
-
 import matplotlib.pyplot as plt
 import numpy as np
 import environment
@@ -39,7 +31,7 @@ def main():
     env_conf["num_agents"] = parsed_args.n_agents
     env = environment.GameEnv(env_conf)
 
-    dir_conf, opt = conf["dir_config"], conf["dqn"]
+    dir_conf, opt = conf["dir_config"], conf["ddpg"]
     dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
                                   str(env_conf["sustain_weight"]) + '_' + \
                                   str(training_conf["num_agents"]) + '/'
@@ -100,10 +92,10 @@ def main():
                 [player.learn(global_step) for player in agent_list]
 
             score /= training_conf["num_agents"]
-            '''
+
             print("episode: {}/{}, score: {}, e: {:.2}"
                   .format(epoch, env_conf["train_epochs"], score, agent_list[0].epsilon))
-            '''
+
             avg_scores.append(score)
 
         for a in agent_list:
@@ -116,9 +108,9 @@ def main():
         plt.interactive(False)
         plt.xlabel('Epoch')
         plt.ylabel('Avg score')
-        plt.savefig(dir_conf["model_save_path"] + 'training_plot')
+        plt.savefig(dir_conf["model_save_path"] + 'ddpg_training_plot')
 
-        with open(dir_conf["model_save_path"] + 'avg_score.txt', "w+") as f:
+        with open(dir_conf["model_save_path"] + 'ddpg_avg_score.txt', "w+") as f:
             for r in avg_scores:
                 f.write(str(r) + '\n')
 
@@ -181,13 +173,13 @@ def main():
         plt.interactive(False)
         plt.xlabel('Epoch')
         plt.ylabel('Avg score')
-        plt.savefig(dir_conf["model_save_path"] + 'test_plot')
+        plt.savefig(dir_conf["model_save_path"] + 'ddpg_test_plot')
 
-        with open(dir_conf["model_save_path"] + 'test_avg_score.txt', "w+") as f:
+        with open(dir_conf["model_save_path"] + 'ddpg_test_avg_score.txt', "w+") as f:
             for r in avg_scores:
                 f.write(str(r) + '\n')
 
-        with open(dir_conf["model_save_path"] + "test_resource_level.txt", "w+") as f:
+        with open(dir_conf["model_save_path"] + "ddpg_test_resource_level.txt", "w+") as f:
             for r in resource_level:
                 f.write(str(r) + '\n')
 

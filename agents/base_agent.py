@@ -8,7 +8,6 @@
 import tensorflow as tf
 import numpy as np
 import os
-import random
 from abc import abstractmethod
 
 
@@ -51,17 +50,6 @@ class BaseAgent(object):
             print("load successfully")
         else:
             self.sess.run(self.init_op)
-
-    def choose_action(self, state):
-        """
-        Choose an action
-        """
-        if not self._learning_mode or random.random() >= self.epsilon:
-            action = np.argmax(self.sess.run(self.action_output,
-                                             feed_dict={self._state: state}))
-        else:
-            action = np.random.randint(self.opt["action_space"])
-        return action
 
     @abstractmethod
     def _build_model(self):

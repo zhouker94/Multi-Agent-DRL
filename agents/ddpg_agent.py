@@ -14,68 +14,109 @@ import numpy as np
 class DDPGAgent(base_agent.BaseAgent):
     def __init__(self, name, opt, learning_mode=True):
         super().__init__(name, opt, learning_mode)
-        self.s_buffer, self.a_buffer, self.r_buffer = [], [], []
+        self.action_upper_bound = tf.placeholder(tf.float32, [None, ], name='action_upper_bound')
+        self.buffer = np.zeros((self.opt["memory_size"], self.opt["state_space"] * 2 + self.opt["action_space"] + 1))
+        self.buffer_item_count = 0
 
     def _build_model(self):
-        # w, b initializer
-        w_initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
-        b_initializer = tf.constant_initializer(0.1)
+        self.tau = tf.constant(self.opt["tau"])
+        self.a_predict = self.__build_actor_nn(self._state, "predict/actor", trainable=True)
+        self.a_next = self.__build_actor_nn(self._next_state, "target/actor", trainable=False)
+        self.q_predict = self.__build_critic(self._state, self.a_predict, "predict/critic", trainable=True)
+        self.q_next = self.__build_critic(self._next_state, self.a_next, "target/critic", trainable=False)
+        self.params = []
 
-        with tf.variable_scope('policy_network'):
-            batch_norm_state = tf.layers.batch_normalization(self._state)
-            layer_norm_state = tf.contrib.layers.layer_norm(batch_norm_state)
+        for scope in ['predict/actor', 'target/actor', 'predict/critic', 'target/critic']:
+            self.params.append(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope))
 
-            phi_state_layer_1 = tf.layers.dense(layer_norm_state,
-                                                self.opt["fully_connected_layer_1_node_num"],
-                                                kernel_initializer=w_initializer,
-                                                bias_initializer=b_initializer,
-                                                activation=tf.nn.relu)
-            phi_state_layer_2 = tf.layers.dense(phi_state_layer_1,
-                                                self.opt["fully_connected_layer_2_node_num"],
-                                                kernel_initializer=w_initializer,
-                                                bias_initializer=b_initializer,
-                                                activation=tf.nn.relu)
-            phi_state_layer_3 = tf.layers.dense(phi_state_layer_2,
-                                                self.opt["fully_connected_layer_3_node_num"],
-                                                kernel_initializer=w_initializer,
-                                                bias_initializer=b_initializer,
-                                                activation=tf.nn.relu)
+        self.actor_loss = -tf.reduce_mean(self.q_predict)
+        self.actor_train_op = tf.train.AdamOptimizer(self.opt["learning_rate"]).minimize(self.actor_loss,
+                                                                                         var_list=self.params[0])
 
-        with tf.variable_scope('output'):
-            self.action_output = tf.layers.dense(phi_state_layer_3,
-                                                 self.opt["action_space"],
-                                                 kernel_initializer=w_initializer,
-                                                 bias_initializer=b_initializer,
-                                                 activation=tf.nn.relu)
+        self.q_target = self._reward + self.gamma * self.q_next
+        self.critic_loss = tf.losses.mean_squared_error(self.q_target, self.q_predict)
+        self.critic_train_op = tf.train.AdamOptimizer(self.opt["learning_rate"] * 2).minimize(self.critic_loss,
+                                                                                              var_list=self.params[2])
 
-        with tf.variable_scope('loss'):
-            self.loss = tf.losses.mean_squared_error(self.action_output, self._action) * self._reward
+        self.update_actor = [tf.assign(t_a, (1 - self.tau) * t_a + self.tau * p_a) for p_a, t_a in zip(self.params[0],
+                                                                                                       self.params[1])]
 
-        with tf.variable_scope('train'):
-            self.train_op = tf.train.AdamOptimizer(self._learning_rate).minimize(self.loss)
+        self.update_critic = [tf.assign(t_c, (1 - self.tau) * t_c + self.tau * p_c) for p_c, t_c in zip(self.params[2],
+                                                                                                        self.params[3])]
 
-    def save_transition(self, state, action, reward):
-        self.s_buffer.append(state)
-        self.a_buffer.append(action)
-        self.r_buffer.append(reward)
+    def __build_actor_nn(self, state, scope, trainable=True):
+        w_init, b_init = tf.random_normal_initializer(.0, .01), tf.constant_initializer(.01)
 
-    def _get_normalized_rewards(self):
-        reward_normalized = np.zeros_like(self.r_buffer)
-        reward_delta = 0
-        for index in reversed(range(0, len(self.r_buffer))):
-            reward_delta = reward_delta * self.gamma + self.r_buffer[index]
-            reward_normalized[index] = reward_delta
-        reward_normalized -= np.mean(reward_normalized)
-        reward_normalized /= np.std(reward_normalized)
-        return reward_normalized
+        with tf.variable_scope(scope):
+            phi_state = tf.layers.dense(state,
+                                        30,
+                                        tf.nn.relu,
+                                        kernel_initializer=w_init,
+                                        bias_initializer=b_init,
+                                        trainable=trainable)
+
+            action_prob = tf.layers.dense(phi_state,
+                                          self.opt["action_space"],
+                                          tf.nn.tanh,
+                                          kernel_initializer=w_init,
+                                          bias_initializer=b_init,
+                                          trainable=trainable)
+
+            return tf.multiply(action_prob, self.action_upper_bound)
+
+    @staticmethod
+    def __build_critic(state, action, scope, trainable=True):
+        w_init, b_init = tf.random_normal_initializer(.0, .01), tf.constant_initializer(.01)
+
+        with tf.variable_scope(scope):
+            phi_state = tf.layers.dense(state,
+                                        30,
+                                        kernel_initializer=w_init,
+                                        bias_initializer=b_init,
+                                        trainable=trainable)
+
+            phi_action = tf.layers.dense(action,
+                                         30,
+                                         kernel_initializer=w_init,
+                                         bias_initializer=b_init,
+                                         trainable=trainable)
+
+            q_value = tf.layers.dense(tf.nn.relu(phi_state + phi_action),
+                                      1,
+                                      kernel_initializer=w_init,
+                                      bias_initializer=b_init,
+                                      trainable=trainable)
+
+            return q_value
+
+    def save_transition(self, state, action, reward, state_next):
+        transition = np.hstack((state, action, [reward], state_next))
+        index = self.buffer_item_count % self.opt["memory_size"]
+        self.buffer[index, :] = transition
+        self.buffer_item_count += 1
+
+    def get_sample_batch(self):
+        indices = np.random.choice(self.opt["memory_size"], size=self.opt["batch_size"])
+        batch = self.buffer[indices, :]
+        state = batch[:, :self.opt["state_space"]]
+        action = batch[:, self.opt["state_space"]: self.opt["state_space"] + self.opt["action_space"]]
+        reward = batch[:, -self.opt["state_space"] - 1: -self.opt["state_space"]]
+        state_next = batch[:, -self.opt["state_space"]:]
+        return state, action, reward, state_next
 
     def learn(self, global_step):
-        reward_normalized = self._get_normalized_rewards()
+        self.sess.run([self.update_actor, self.update_critic])
 
-        _, loss = self.sess.run([self.train_op, self.loss], feed_dict={
-            self._state: np.vstack(self.s_buffer),
-            self._action: np.array(self.a_buffer),
-            self._reward: reward_normalized,
+        state, action, reward, state_next = self.get_sample_batch()
+
+        self.sess.run(self.actor_train_op, {
+            self._state: state})
+
+        self.sess.run(self.critic_train_op, {
+            self._state: state, self.a_predict: action, self._reward: reward, self._next_state: state_next
         })
 
-        self.s_buffer, self.a_buffer, self.r_buffer = [], [], []
+    def choose_action(self, state, action_upper_bound):
+        action = self.sess.run(self.a_predict, {self._state: state, self.action_upper_bound: action_upper_bound})
+        action = np.clip(np.random.normal(action, self.epsilon), -10, 10)
+        return action[0]

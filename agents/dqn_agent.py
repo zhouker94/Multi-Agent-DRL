@@ -8,6 +8,7 @@
 import numpy as np
 import tensorflow as tf
 from agents import base_agent
+import random
 
 
 class DqnAgent(base_agent.BaseAgent):
@@ -144,3 +145,14 @@ class DqnAgent(base_agent.BaseAgent):
         Copy weights from eval_net to target_net
         """
         self.sess.run(self.update_q_net)
+
+    def choose_action(self, state):
+        """
+        Choose an action
+        """
+        if not self._learning_mode or random.random() >= self.epsilon:
+            action = np.argmax(self.sess.run(self.action_output,
+                                             feed_dict={self._state: state}))
+        else:
+            action = np.random.randint(self.opt["action_space"])
+        return action
