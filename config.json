@@ -59,9 +59,10 @@
     "summary_path": "log/drqn_graph/"
   },
   "ddpg": {
+    "action_upper_bound": 500.0,
     "tau": 0.01,
     "state_space": 2,
-    "action_space": 2,
+    "action_space": 1,
     "learning_rate": 0.001,
     "init_epsilon": 1.0,
     "min_epsilon": 0.1,

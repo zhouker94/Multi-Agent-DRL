@@ -14,19 +14,22 @@ import numpy as np
 class DDPGAgent(base_agent.BaseAgent):
     def __init__(self, name, opt, learning_mode=True):
         super().__init__(name, opt, learning_mode)
-        self.action_upper_bound = tf.placeholder(tf.float32, [None, ], name='action_upper_bound')
         self.buffer = np.zeros((self.opt["memory_size"], self.opt["state_space"] * 2 + self.opt["action_space"] + 1))
         self.buffer_item_count = 0
 
     def _build_model(self):
+        self._reward = tf.placeholder(tf.float32, [None, 1], name='input_reward')
         self.tau = tf.constant(self.opt["tau"])
-        self.a_predict = self.__build_actor_nn(self._state, "predict/actor", trainable=True)
-        self.a_next = self.__build_actor_nn(self._next_state, "target/actor", trainable=False)
-        self.q_predict = self.__build_critic(self._state, self.a_predict, "predict/critic", trainable=True)
-        self.q_next = self.__build_critic(self._next_state, self.a_next, "target/critic", trainable=False)
+        self.a_predict = self.__build_actor_nn(self._state, "predict/actor" + self._name, trainable=True)
+        self.a_next = self.__build_actor_nn(self._next_state, "target/actor" + self._name, trainable=False)
+        self.q_predict = self.__build_critic(self._state, self.a_predict, "predict/critic" + self._name, trainable=True)
+        self.q_next = self.__build_critic(self._next_state, self.a_next, "target/critic" + self._name, trainable=False)
         self.params = []
 
-        for scope in ['predict/actor', 'target/actor', 'predict/critic', 'target/critic']:
+        for scope in ['predict/actor'+ self._name,
+                      'target/actor' + self._name,
+                      'predict/critic' + self._name,
+                      'target/critic' + self._name]:
             self.params.append(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope))
 
         self.actor_loss = -tf.reduce_mean(self.q_predict)
@@ -45,11 +48,11 @@ class DDPGAgent(base_agent.BaseAgent):
                                                                                                         self.params[3])]
 
     def __build_actor_nn(self, state, scope, trainable=True):
-        w_init, b_init = tf.random_normal_initializer(.0, .01), tf.constant_initializer(.01)
+        w_init, b_init = tf.random_normal_initializer(.0, .001), tf.constant_initializer(.001)
 
         with tf.variable_scope(scope):
             phi_state = tf.layers.dense(state,
-                                        30,
+                                        32,
                                         tf.nn.relu,
                                         kernel_initializer=w_init,
                                         bias_initializer=b_init,
@@ -57,26 +60,26 @@ class DDPGAgent(base_agent.BaseAgent):
 
             action_prob = tf.layers.dense(phi_state,
                                           self.opt["action_space"],
-                                          tf.nn.tanh,
+                                          tf.nn.sigmoid,
                                           kernel_initializer=w_init,
                                           bias_initializer=b_init,
                                           trainable=trainable)
-
-            return tf.multiply(action_prob, self.action_upper_bound)
+            
+            return tf.multiply(action_prob, self.opt["action_upper_bound"])
 
     @staticmethod
     def __build_critic(state, action, scope, trainable=True):
-        w_init, b_init = tf.random_normal_initializer(.0, .01), tf.constant_initializer(.01)
+        w_init, b_init = tf.random_normal_initializer(.0, .001), tf.constant_initializer(.001)
 
         with tf.variable_scope(scope):
             phi_state = tf.layers.dense(state,
-                                        30,
+                                        32,
                                         kernel_initializer=w_init,
                                         bias_initializer=b_init,
                                         trainable=trainable)
 
             phi_action = tf.layers.dense(action,
-                                         30,
+                                         32,
                                          kernel_initializer=w_init,
                                          bias_initializer=b_init,
                                          trainable=trainable)
@@ -115,8 +118,11 @@ class DDPGAgent(base_agent.BaseAgent):
         self.sess.run(self.critic_train_op, {
             self._state: state, self.a_predict: action, self._reward: reward, self._next_state: state_next
         })
+        
+        self.epsilon -= self.opt["epsilon_decay"]
 
     def choose_action(self, state, action_upper_bound):
-        action = self.sess.run(self.a_predict, {self._state: state, self.action_upper_bound: action_upper_bound})
-        action = np.clip(np.random.normal(action, self.epsilon), -10, 10)
+        action = self.sess.run(self.a_predict, {self._state: state})
+        exploration_scale = 100 * self.epsilon
+        action = np.clip(np.random.normal(action[0], exploration_scale), 0, action_upper_bound)
         return action[0]

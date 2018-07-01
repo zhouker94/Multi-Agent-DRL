@@ -21,14 +21,16 @@ def main():
     parser.add_argument('--n_agents', type=int, default=1)
     parser.add_argument('--sustainable_weight', type=float, default=0.5)
     parser.add_argument('--is_test', type=bool, default=False)
+    parser.add_argument('--replenishment_rate', type=float, default=0.5)
     parsed_args = parser.parse_args()
 
     conf = json.load(open('config.json', 'r'))
     training_conf = conf["training_config"]
+    training_conf["num_agents"] = parsed_args.n_agents
 
     env_conf = conf["env_config"]
     env_conf["sustain_weight"] = parsed_args.sustainable_weight
-    env_conf["num_agents"] = parsed_args.n_agents
+    env_conf["replenishment_rate"] = parsed_args.replenishment_rate
     env = environment.GameEnv(env_conf)
 
     dir_conf, opt = conf["dir_config"], conf["dqn"]
@@ -175,11 +177,13 @@ def main():
         plt.ylabel('Avg score')
         plt.savefig(dir_conf["model_save_path"] + 'test_plot')
 
+        '''
         with open(dir_conf["model_save_path"] + 'test_avg_score.txt', "w+") as f:
             for r in avg_scores:
                 f.write(str(r) + '\n')
-
-        with open(dir_conf["model_save_path"] + "test_resource_level.txt", "w+") as f:
+        '''
+        
+        with open(dir_conf["model_save_path"] + str(env_conf["replenishment_rate"]) + "_test_resource_level.txt", "w+") as f:
             for r in resource_level:
                 f.write(str(r) + '\n')
 

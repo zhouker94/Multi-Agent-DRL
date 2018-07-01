@@ -28,7 +28,7 @@ def main():
 
     env_conf = conf["env_config"]
     env_conf["sustain_weight"] = parsed_args.sustainable_weight
-    env_conf["num_agents"] = parsed_args.n_agents
+    training_conf["num_agents"] = parsed_args.n_agents
     env = environment.GameEnv(env_conf)
 
     dir_conf, opt = conf["dir_config"], conf["ddpg"]
@@ -61,25 +61,25 @@ def main():
             for time in range(training_conf["max_round"]):
                 # actions -> [Increase effort, Decrease effort, IDLE]
                 actions = [0] * training_conf["num_agents"]
-
                 for index, player in enumerate(agent_list):
-                    action = player.choose_action(np.expand_dims(state, axis=0))
-                    actions[index] = action
-
+                    action = player.choose_action(np.expand_dims(state, axis=0), env.common_resource_pool / training_conf["num_agents"])
+                    efforts[index] = action
+                    '''
                     # increase
                     if action == 0:
                         efforts[index] += training_conf["min_increment"]
                     # decrease
                     elif action == 1:
                         efforts[index] -= training_conf["min_increment"]
+                    '''
 
                     if efforts[index] <= 1:
                         efforts[index] = 1
-
+                
                 next_state, rewards, done = env.step(efforts)
                 score += sum(rewards)
 
-                [player.save_transition(state, actions[index], rewards[index])
+                [player.save_transition(state, actions[index], rewards[index], next_state)
                  for index, player in enumerate(agent_list)]
                 state = next_state
 
@@ -87,14 +87,14 @@ def main():
 
                 if done:
                     break
-
+            
             if not epoch % 2:
                 [player.learn(global_step) for player in agent_list]
 
             score /= training_conf["num_agents"]
 
             print("episode: {}/{}, score: {}, e: {:.2}"
-                  .format(epoch, env_conf["train_epochs"], score, agent_list[0].epsilon))
+                  .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
 
             avg_scores.append(score)
 
@@ -138,8 +138,9 @@ def main():
 
                 for index, player in enumerate(agent_list):
                     action = player.choose_action(np.expand_dims(state, axis=0))
-                    actions[index] = action
-
+                    # actions[index] = action
+                    efforts[index] = action
+                    '''
                     # increase
                     if action == 0:
                         efforts[index] += training_conf["min_increment"]
@@ -149,6 +150,7 @@ def main():
 
                     if efforts[index] <= 1:
                         efforts[index] = 1
+                    '''
 
                 next_state, rewards, done = env.step(efforts)
                 score = sum(rewards)
