@@ -6,12 +6,14 @@
 # @Software: PyCharm Community Edition
 
 
-from agents import base_agent
+import base_agent
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import json
+import sys
+sys.path.append("../")
 import environment
 
 
@@ -157,152 +159,152 @@ class DDPGAgent(base_agent.BaseAgent):
 
 if __name__ == "__main__":
 
-    def main():
+    # -------------- parameters initialize --------------
 
-        # -------------- parameters initialize --------------
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--n_agents', type=int, default=1)
+    parser.add_argument('--sustainable_weight', type=float, default=0.5)
+    parser.add_argument('--is_test', type=bool, default=False)
+    parsed_args = parser.parse_args()
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--n_agents', type=int, default=1)
-        parser.add_argument('--sustainable_weight', type=float, default=0.5)
-        parser.add_argument('--is_test', type=bool, default=False)
-        parsed_args = parser.parse_args()
+    conf = json.load(open('../config.json', 'r'))
+    training_conf = conf["training_config"]
 
-        conf = json.load(open('../config.json', 'r'))
-        training_conf = conf["training_config"]
+    env_conf = conf["env_config"]
+    env_conf["sustain_weight"] = parsed_args.sustainable_weight
+    training_conf["num_agents"] = parsed_args.n_agents
+    env = environment.GameEnv(env_conf)
 
-        env_conf = conf["env_config"]
-        env_conf["sustain_weight"] = parsed_args.sustainable_weight
-        training_conf["num_agents"] = parsed_args.n_agents
-        env = environment.GameEnv(env_conf)
+    dir_conf, opt = conf["dir_config"], conf["ddpg"]
+    dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
+                                  str(env_conf["sustain_weight"]) + '_' + \
+                                  str(training_conf["num_agents"]) + '/'
 
-        dir_conf, opt = conf["dir_config"], conf["ddpg"]
-        dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
-                                      str(env_conf["sustain_weight"]) + '_' + \
-                                      str(training_conf["num_agents"]) + '/'
+    avg_scores = []
+    global_step = 0
 
-        avg_scores = []
-        global_step = 0
+    # -------------- start train mode --------------
 
-        # -------------- start train mode --------------
+    if not parsed_args.is_test:
 
-        if not parsed_args.is_test:
+        agent_list = []
+        for i in range(training_conf["num_agents"]):
+            player = DDPGAgent("DDPG_" + str(i), opt)
+            player.start(dir_path=dir_conf["model_save_path"])
+            agent_list.append(player)
 
-            agent_list = []
-            for i in range(training_conf["num_agents"]):
-                player = DDPGAgent("DDPG_" + str(i), opt)
-                player.start(dir_path=dir_conf["model_save_path"])
-                agent_list.append(player)
+        for epoch in range(training_conf["train_epochs"]):
+            if agent_list[0].epsilon <= opt["min_epsilon"]:
+                break
 
-            for epoch in range(training_conf["train_epochs"]):
-                if agent_list[0].epsilon <= opt["min_epsilon"]:
+            # state -> [X, Pi]
+            state = env.reset()
+
+            efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
+                "num_agents"]
+            score = 0
+
+            for time in range(training_conf["max_round"]):
+                actions = [0] * training_conf["num_agents"]
+                for index, player in enumerate(agent_list):
+                    action = player.choose_action(np.expand_dims(state, axis=0),
+                                                  env.common_resource_pool / training_conf["num_agents"])
+                    if action <= 0:
+                        action = 1
+                    efforts[index] = action
+                
+                next_state, rewards, done = env.step(efforts)
+                score += sum(rewards)
+
+                [player.save_transition(state, actions[index], rewards[index], next_state)
+                 for index, player in enumerate(agent_list)]
+                state = next_state
+
+                global_step += 1
+
+                if done:
                     break
 
-                # state -> [X, Pi]
-                state = env.reset()
+            if not epoch % 2:
+                [player.learn(global_step) for player in agent_list]
 
-                efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
-                    "num_agents"]
-                score = 0
+            score /= training_conf["num_agents"]
 
-                for time in range(training_conf["max_round"]):
-                    actions = [0] * training_conf["num_agents"]
-                    for index, player in enumerate(agent_list):
-                        action = player.choose_action(np.expand_dims(state, axis=0),
-                                                      env.common_resource_pool / training_conf["num_agents"])
-                        efforts[index] = action
+            print("episode: {}/{}, score: {}, e: {:.2}"
+                  .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
 
-                    next_state, rewards, done = env.step(efforts)
-                    score += sum(rewards)
+            avg_scores.append(score)
 
-                    [player.save_transition(state, actions[index], rewards[index], next_state)
-                     for index, player in enumerate(agent_list)]
-                    state = next_state
+        for a in agent_list:
+            a.save(dir_path=dir_conf["model_save_path"])
+            a.sess.close()
 
-                    global_step += 1
+        # -------------- save results --------------
 
-                    if done:
-                        break
+        plt.switch_backend('agg')
+        plt.plot(avg_scores)
+        plt.interactive(False)
+        plt.xlabel('Epoch')
+        plt.ylabel('Avg score')
+        plt.savefig(dir_conf["model_save_path"] + 'ddpg_training_plot')
 
-                if not epoch % 2:
-                    [player.learn(global_step) for player in agent_list]
+        with open(dir_conf["model_save_path"] + 'ddpg_avg_score.txt', "w+") as f:
+            for r in avg_scores:
+                f.write(str(r) + '\n')
 
-                score /= training_conf["num_agents"]
+    # -------------- start test mode --------------
 
-                print("episode: {}/{}, score: {}, e: {:.2}"
-                      .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
+    else:
+        agent_list = []
+        for i in range(training_conf["num_agents"]):
+            player = DDPGAgent("DDPG_" + str(i), opt, learning_mode=False)
+            player.start(dir_path=dir_conf["model_save_path"])
+            agent_list.append(player)
 
-                avg_scores.append(score)
+        resource_level = []
+        for epoch in range(1):
+            # state -> [X, Pi]
+            state = env.reset()
 
-            for a in agent_list:
-                a.save(dir_path=dir_conf["model_save_path"])
-                a.sess.close()
+            efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
+                "num_agents"]
+            score = 0
 
-            # -------------- save results --------------
+            for time in range(training_conf["max_round"]):
+                resource_level.append(env.common_resource_pool)
 
-            plt.switch_backend('agg')
-            plt.plot(avg_scores)
-            plt.interactive(False)
-            plt.xlabel('Epoch')
-            plt.ylabel('Avg score')
-            plt.savefig(dir_conf["model_save_path"] + 'ddpg_training_plot')
+                for index, player in enumerate(agent_list):
+                    action = player.choose_action(np.expand_dims(state, axis=0),
+                                                  env.common_resource_pool / training_conf["num_agents"])
+                    efforts[index] = action
 
-            with open(dir_conf["model_save_path"] + 'ddpg_avg_score.txt', "w+") as f:
-                for r in avg_scores:
-                    f.write(str(r) + '\n')
+                next_state, rewards, done = env.step(efforts)
+                score += sum(rewards)
+                state = next_state
+                global_step += 1
 
-        # -------------- start test mode --------------
+                if done:
+                    break
 
-        else:
-            agent_list = []
-            for i in range(training_conf["num_agents"]):
-                player = DDPGAgent("DDPG_" + str(i), opt, learning_mode=False)
-                player.start(dir_path=dir_conf["model_save_path"])
-                agent_list.append(player)
+            print("episode: {}/{}, score: {}, e: {:.2}"
+                  .format(epoch, training_conf["test_epochs"], score, agent_list[0].epsilon))
 
-            resource_level = []
-            for epoch in range(1):
-                # state -> [X, Pi]
-                state = env.reset()
+        for a in agent_list:
+            a.sess.close()
 
-                efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
-                    "num_agents"]
-                score = 0
+        # -------------- save results --------------
 
-                for time in range(training_conf["max_round"]):
-                    resource_level.append(env.common_resource_pool)
+        plt.switch_backend('agg')
+        plt.plot(avg_scores)
+        plt.interactive(False)
+        plt.xlabel('Epoch')
+        plt.ylabel('Avg score')
+        plt.savefig(dir_conf["model_save_path"] + 'ddpg_test_plot')
 
-                    for index, player in enumerate(agent_list):
-                        action = player.choose_action(np.expand_dims(state, axis=0),
-                                                      env.common_resource_pool / training_conf["num_agents"])
-                        efforts[index] = action
+        with open(dir_conf["model_save_path"] + 'ddpg_test_avg_score.txt', "w+") as f:
+            for r in avg_scores:
+                f.write(str(r) + '\n')
 
-                    next_state, rewards, done = env.step(efforts)
-                    score += sum(rewards)
-                    state = next_state
-                    global_step += 1
-
-                    if done:
-                        break
-
-                print("episode: {}/{}, score: {}, e: {:.2}"
-                      .format(epoch, training_conf["test_epochs"], score, agent_list[0].epsilon))
-
-            for a in agent_list:
-                a.sess.close()
-
-            # -------------- save results --------------
-
-            plt.switch_backend('agg')
-            plt.plot(avg_scores)
-            plt.interactive(False)
-            plt.xlabel('Epoch')
-            plt.ylabel('Avg score')
-            plt.savefig(dir_conf["model_save_path"] + 'ddpg_test_plot')
-
-            with open(dir_conf["model_save_path"] + 'ddpg_test_avg_score.txt', "w+") as f:
-                for r in avg_scores:
-                    f.write(str(r) + '\n')
-
-            with open(dir_conf["model_save_path"] + "ddpg_test_resource_level.txt", "w+") as f:
-                for r in resource_level:
-                    f.write(str(r) + '\n')
+        with open(dir_conf["model_save_path"] + "ddpg_test_resource_level.txt", "w+") as f:
+            for r in resource_level:
+                f.write(str(r) + '\n')
