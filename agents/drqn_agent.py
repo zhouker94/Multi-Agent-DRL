@@ -21,19 +21,18 @@ class DrqnAgent(base_agent.BaseAgent):
 
         with tf.variable_scope('eval_net_' + self._name):
             batch_norm_state = tf.layers.batch_normalization(self._state)
-            layer_norm_state = tf.contrib.layers.layer_norm(batch_norm_state)
 
             with tf.variable_scope('phi_net'):
                 e_gru_cell_fw = tf.nn.rnn_cell.MultiRNNCell(
                     [tf.contrib.rnn.GRUCell(num_units=self.opt["gru_nodes_nums"][i], activation=tf.nn.relu)
-                     for i in self.opt["gru_layer_num"]])
+                     for i in range(len(self.opt["gru_nodes_nums"]))])
                 e_gru_cell_bw = tf.nn.rnn_cell.MultiRNNCell(
                     [tf.contrib.rnn.GRUCell(num_units=self.opt["gru_nodes_nums"][i], activation=tf.nn.relu)
-                     for i in self.opt["gru_layer_num"]])
+                     for i in range(len(self.opt["gru_nodes_nums"]))])
 
                 _, h_state = tf.nn.bidirectional_dynamic_rnn(cell_fw=e_gru_cell_fw,
                                                              cell_bw=e_gru_cell_bw,
-                                                             inputs=layer_norm_state,
+                                                             inputs=batch_norm_state,
                                                              dtype=tf.float32)
 
             self.q_values_predict = tf.layers.dense(h_state,
@@ -55,10 +54,10 @@ class DrqnAgent(base_agent.BaseAgent):
             with tf.variable_scope('phi_net'):
                 t_gru_cell_fw = tf.nn.rnn_cell.MultiRNNCell(
                     [tf.contrib.rnn.GRUCell(num_units=self.opt["gru_nodes_nums"][i], activation=tf.nn.relu)
-                     for i in self.opt["gru_layer_num"]])
+                     for i in range(len(self.opt["gru_nodes_nums"]))])
                 t_gru_cell_bw = tf.nn.rnn_cell.MultiRNNCell(
                     [tf.contrib.rnn.GRUCell(num_units=self.opt["gru_nodes_nums"][i], activation=tf.nn.relu)
-                     for i in self.opt["gru_layer_num"]])
+                     for i in range(len(self.opt["gru_nodes_nums"]))])
                 _, h_next_state = tf.nn.bidirectional_dynamic_rnn(cell_fw=t_gru_cell_fw,
                                                                   cell_bw=t_gru_cell_bw,
                                                                   inputs=layer_norm_next_state,

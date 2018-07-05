@@ -41,15 +41,18 @@ class BaseAgent(object):
         # self.writer = tf.summary.FileWriter(self.opt["summary_path"] + self._name + '/', self.sess.graph)
         np.random.seed(seed=hash(self._name) % 256)
 
-    def start(self, dir_path):
+    def start(self, dir_path=""):
         """
         Start: new/load a session
         """
-        if os.path.exists(dir_path + self._name):
-            self.saver.restore(self.sess, dir_path + self._name)
-            print("load successfully")
-        else:
+        if self._learning_mode:
             self.sess.run(self.init_op)
+        else:
+            if os.path.exists(dir_path + self._name):
+                self.saver.restore(self.sess, dir_path + self._name)
+                print("load successfully")
+            else:
+                print("no model exists")
 
     @abstractmethod
     def _build_model(self):

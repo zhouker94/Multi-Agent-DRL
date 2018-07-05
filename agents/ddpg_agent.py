@@ -121,8 +121,8 @@ class DDPGAgent(base_agent.BaseAgent):
         
         self.epsilon -= self.opt["epsilon_decay"]
 
-    def choose_action(self, state, action_upper_bound):
+    def choose_action(self, state, upper_bound):
         action = self.sess.run(self.a_predict, {self._state: state})
         exploration_scale = 100 * self.epsilon
-        action = np.clip(np.random.normal(action[0], exploration_scale), 0, action_upper_bound)
+        action = np.clip(np.random.normal(action[0], exploration_scale), 0, upper_bound)
         return action[0]

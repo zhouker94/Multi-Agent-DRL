@@ -40,6 +40,7 @@ def main():
     global_step = 0
 
     # -------------- start train mode --------------
+
     if not parsed_args.is_test:
 
         agent_list = []
@@ -59,23 +60,12 @@ def main():
             score = 0
 
             for time in range(training_conf["max_round"]):
-                # actions -> [Increase effort, Decrease effort, IDLE]
                 actions = [0] * training_conf["num_agents"]
                 for index, player in enumerate(agent_list):
-                    action = player.choose_action(np.expand_dims(state, axis=0), env.common_resource_pool / training_conf["num_agents"])
+                    action = player.choose_action(np.expand_dims(state, axis=0),
+                                                  env.common_resource_pool / training_conf["num_agents"])
                     efforts[index] = action
-                    '''
-                    # increase
-                    if action == 0:
-                        efforts[index] += training_conf["min_increment"]
-                    # decrease
-                    elif action == 1:
-                        efforts[index] -= training_conf["min_increment"]
-                    '''
 
-                    if efforts[index] <= 1:
-                        efforts[index] = 1
-                
                 next_state, rewards, done = env.step(efforts)
                 score += sum(rewards)
 
@@ -87,7 +77,7 @@ def main():
 
                 if done:
                     break
-            
+
             if not epoch % 2:
                 [player.learn(global_step) for player in agent_list]
 
@@ -103,6 +93,7 @@ def main():
             a.sess.close()
 
         # -------------- save results --------------
+
         plt.switch_backend('agg')
         plt.plot(avg_scores)
         plt.interactive(False)
@@ -115,6 +106,7 @@ def main():
                 f.write(str(r) + '\n')
 
     # -------------- start test mode --------------
+
     else:
         agent_list = []
         for i in range(training_conf["num_agents"]):
@@ -170,6 +162,7 @@ def main():
             a.sess.close()
 
         # -------------- save results --------------
+
         plt.switch_backend('agg')
         plt.plot(avg_scores)
         plt.interactive(False)
