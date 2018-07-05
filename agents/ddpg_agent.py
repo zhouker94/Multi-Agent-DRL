@@ -9,6 +9,10 @@
 from agents import base_agent
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
+import argparse
+import json
+import environment
 
 
 class DDPGAgent(base_agent.BaseAgent):
@@ -26,7 +30,7 @@ class DDPGAgent(base_agent.BaseAgent):
         self.q_next = self.__build_critic(self._next_state, self.a_next, "target/critic" + self._name, trainable=False)
         self.params = []
 
-        for scope in ['predict/actor'+ self._name,
+        for scope in ['predict/actor' + self._name,
                       'target/actor' + self._name,
                       'predict/critic' + self._name,
                       'target/critic' + self._name]:
@@ -51,20 +55,35 @@ class DDPGAgent(base_agent.BaseAgent):
         w_init, b_init = tf.random_normal_initializer(.0, .001), tf.constant_initializer(.001)
 
         with tf.variable_scope(scope):
-            phi_state = tf.layers.dense(state,
-                                        32,
-                                        tf.nn.relu,
-                                        kernel_initializer=w_init,
-                                        bias_initializer=b_init,
-                                        trainable=trainable)
+            batch_norm_state = tf.layers.batch_normalization(state)
+            phi_state_layer_1 = tf.layers.dense(batch_norm_state,
+                                                self.opt["fully_connected_layer_1_node_num"],
+                                                tf.nn.relu,
+                                                kernel_initializer=w_init,
+                                                bias_initializer=b_init,
+                                                trainable=trainable)
 
-            action_prob = tf.layers.dense(phi_state,
+            phi_state_layer_2 = tf.layers.dense(phi_state_layer_1,
+                                                self.opt["fully_connected_layer_2_node_num"],
+                                                tf.nn.relu,
+                                                kernel_initializer=w_init,
+                                                bias_initializer=b_init,
+                                                trainable=trainable)
+
+            phi_state_layer_3 = tf.layers.dense(phi_state_layer_2,
+                                                self.opt["fully_connected_layer_3_node_num"],
+                                                tf.nn.relu,
+                                                kernel_initializer=w_init,
+                                                bias_initializer=b_init,
+                                                trainable=trainable)
+
+            action_prob = tf.layers.dense(phi_state_layer_3,
                                           self.opt["action_space"],
                                           tf.nn.sigmoid,
                                           kernel_initializer=w_init,
                                           bias_initializer=b_init,
                                           trainable=trainable)
-            
+
             return tf.multiply(action_prob, self.opt["action_upper_bound"])
 
     @staticmethod
@@ -72,19 +91,27 @@ class DDPGAgent(base_agent.BaseAgent):
         w_init, b_init = tf.random_normal_initializer(.0, .001), tf.constant_initializer(.001)
 
         with tf.variable_scope(scope):
-            phi_state = tf.layers.dense(state,
+            batch_norm_state = tf.layers.batch_normalization(state)
+            phi_state = tf.layers.dense(batch_norm_state,
                                         32,
                                         kernel_initializer=w_init,
                                         bias_initializer=b_init,
                                         trainable=trainable)
 
-            phi_action = tf.layers.dense(action,
+            batch_norm_action = tf.layers.batch_normalization(action)
+            phi_action = tf.layers.dense(batch_norm_action,
                                          32,
                                          kernel_initializer=w_init,
                                          bias_initializer=b_init,
                                          trainable=trainable)
 
-            q_value = tf.layers.dense(tf.nn.relu(phi_state + phi_action),
+            phi_state_action = tf.layers.dense(tf.nn.relu(phi_state + phi_action),
+                                               32,
+                                               kernel_initializer=w_init,
+                                               bias_initializer=b_init,
+                                               trainable=trainable)
+
+            q_value = tf.layers.dense(phi_state_action,
                                       1,
                                       kernel_initializer=w_init,
                                       bias_initializer=b_init,
@@ -118,11 +145,164 @@ class DDPGAgent(base_agent.BaseAgent):
         self.sess.run(self.critic_train_op, {
             self._state: state, self.a_predict: action, self._reward: reward, self._next_state: state_next
         })
-        
+
         self.epsilon -= self.opt["epsilon_decay"]
 
     def choose_action(self, state, upper_bound):
         action = self.sess.run(self.a_predict, {self._state: state})
-        exploration_scale = 100 * self.epsilon
+        exploration_scale = 1000 * self.epsilon
         action = np.clip(np.random.normal(action[0], exploration_scale), 0, upper_bound)
         return action[0]
+
+
+if __name__ == "__main__":
+
+    def main():
+
+        # -------------- parameters initialize --------------
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--n_agents', type=int, default=1)
+        parser.add_argument('--sustainable_weight', type=float, default=0.5)
+        parser.add_argument('--is_test', type=bool, default=False)
+        parsed_args = parser.parse_args()
+
+        conf = json.load(open('../config.json', 'r'))
+        training_conf = conf["training_config"]
+
+        env_conf = conf["env_config"]
+        env_conf["sustain_weight"] = parsed_args.sustainable_weight
+        training_conf["num_agents"] = parsed_args.n_agents
+        env = environment.GameEnv(env_conf)
+
+        dir_conf, opt = conf["dir_config"], conf["ddpg"]
+        dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
+                                      str(env_conf["sustain_weight"]) + '_' + \
+                                      str(training_conf["num_agents"]) + '/'
+
+        avg_scores = []
+        global_step = 0
+
+        # -------------- start train mode --------------
+
+        if not parsed_args.is_test:
+
+            agent_list = []
+            for i in range(training_conf["num_agents"]):
+                player = DDPGAgent("DDPG_" + str(i), opt)
+                player.start(dir_path=dir_conf["model_save_path"])
+                agent_list.append(player)
+
+            for epoch in range(training_conf["train_epochs"]):
+                if agent_list[0].epsilon <= opt["min_epsilon"]:
+                    break
+
+                # state -> [X, Pi]
+                state = env.reset()
+
+                efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
+                    "num_agents"]
+                score = 0
+
+                for time in range(training_conf["max_round"]):
+                    actions = [0] * training_conf["num_agents"]
+                    for index, player in enumerate(agent_list):
+                        action = player.choose_action(np.expand_dims(state, axis=0),
+                                                      env.common_resource_pool / training_conf["num_agents"])
+                        efforts[index] = action
+
+                    next_state, rewards, done = env.step(efforts)
+                    score += sum(rewards)
+
+                    [player.save_transition(state, actions[index], rewards[index], next_state)
+                     for index, player in enumerate(agent_list)]
+                    state = next_state
+
+                    global_step += 1
+
+                    if done:
+                        break
+
+                if not epoch % 2:
+                    [player.learn(global_step) for player in agent_list]
+
+                score /= training_conf["num_agents"]
+
+                print("episode: {}/{}, score: {}, e: {:.2}"
+                      .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
+
+                avg_scores.append(score)
+
+            for a in agent_list:
+                a.save(dir_path=dir_conf["model_save_path"])
+                a.sess.close()
+
+            # -------------- save results --------------
+
+            plt.switch_backend('agg')
+            plt.plot(avg_scores)
+            plt.interactive(False)
+            plt.xlabel('Epoch')
+            plt.ylabel('Avg score')
+            plt.savefig(dir_conf["model_save_path"] + 'ddpg_training_plot')
+
+            with open(dir_conf["model_save_path"] + 'ddpg_avg_score.txt', "w+") as f:
+                for r in avg_scores:
+                    f.write(str(r) + '\n')
+
+        # -------------- start test mode --------------
+
+        else:
+            agent_list = []
+            for i in range(training_conf["num_agents"]):
+                player = DDPGAgent("DDPG_" + str(i), opt, learning_mode=False)
+                player.start(dir_path=dir_conf["model_save_path"])
+                agent_list.append(player)
+
+            resource_level = []
+            for epoch in range(1):
+                # state -> [X, Pi]
+                state = env.reset()
+
+                efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
+                    "num_agents"]
+                score = 0
+
+                for time in range(training_conf["max_round"]):
+                    resource_level.append(env.common_resource_pool)
+
+                    for index, player in enumerate(agent_list):
+                        action = player.choose_action(np.expand_dims(state, axis=0),
+                                                      env.common_resource_pool / training_conf["num_agents"])
+                        efforts[index] = action
+
+                    next_state, rewards, done = env.step(efforts)
+                    score += sum(rewards)
+                    state = next_state
+                    global_step += 1
+
+                    if done:
+                        break
+
+                print("episode: {}/{}, score: {}, e: {:.2}"
+                      .format(epoch, training_conf["test_epochs"], score, agent_list[0].epsilon))
+
+            for a in agent_list:
+                a.sess.close()
+
+            # -------------- save results --------------
+
+            plt.switch_backend('agg')
+            plt.plot(avg_scores)
+            plt.interactive(False)
+            plt.xlabel('Epoch')
+            plt.ylabel('Avg score')
+            plt.savefig(dir_conf["model_save_path"] + 'ddpg_test_plot')
+
+            with open(dir_conf["model_save_path"] + 'ddpg_test_avg_score.txt', "w+") as f:
+                for r in avg_scores:
+                    f.write(str(r) + '\n')
+
+            with open(dir_conf["model_save_path"] + "ddpg_test_resource_level.txt", "w+") as f:
+                for r in resource_level:
+                    f.write(str(r) + '\n')

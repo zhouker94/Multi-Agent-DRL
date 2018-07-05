@@ -19,8 +19,8 @@
     "cost_c": 0.5
   },
   "dir_config": {
-    "log_path": "log/",
-    "model_save_path": "log/agent_model/"
+    "log_path": "../log/",
+    "model_save_path": "../log/agent_model/"
   },
   "dqn": {
     "state_space": 2,
@@ -37,7 +37,7 @@
     "fully_connected_layer_2_node_num": 32,
     "fully_connected_layer_3_node_num": 32,
     "in_keep_prob": 0.8,
-    "summary_path": "log/dqn_graph/"
+    "summary_path": "../log/dqn_graph/"
   },
   "drqn": {
     "state_space": 4,
@@ -54,7 +54,7 @@
       32,
       32
     ],
-    "summary_path": "log/drqn_graph/"
+    "summary_path": "../log/drqn_graph/"
   },
   "ddpg": {
     "action_upper_bound": 500.0,
@@ -73,7 +73,7 @@
     "fully_connected_layer_2_node_num": 32,
     "fully_connected_layer_3_node_num": 32,
     "in_keep_prob": 0.8,
-    "summary_path": "log/pg_graph/"
+    "summary_path": "../log/pg_graph/"
   },
   "rdpg": {
     "action_upper_bound": 500.0,
@@ -96,6 +96,6 @@
     "fully_connected_layer_2_node_num": 32,
     "fully_connected_layer_3_node_num": 32,
     "in_keep_prob": 0.8,
-    "summary_path": "log/pg_graph/"
+    "summary_path": "../log/pg_graph/"
   }
 }
