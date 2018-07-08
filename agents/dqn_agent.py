@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import json
 import numpy as np
 import tensorflow as tf
-from agents import base_agent
+import base_agent
 import random
 import sys
 
@@ -54,13 +54,14 @@ class DqnAgent(base_agent.BaseAgent):
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
                                                     name='Q_predict')
+
             # tf.summary.histogram('q_values_predict', self.q_values_predict)
 
             with tf.variable_scope('q_predict'):
                 # size of q_value_predict is [BATCH_SIZE, 1]
                 action_indices = tf.stack([tf.range(tf.shape(self._action)[0], dtype=tf.int32), self._action], axis=1)
                 self.q_value_predict = tf.gather_nd(self.q_values_predict, action_indices)
-                self.action_output = tf.arg_max(self.q_value_predict)
+                self.action_output = tf.argmax(self.q_values_predict)
 
         with tf.variable_scope('target_net_' + self._name):
             batch_norm_next_state = tf.layers.batch_normalization(self._next_state)
@@ -205,7 +206,7 @@ if __name__ == "__main__":
 
             env.reset()
 
-            states = [[0] * agent_opt["state_space"]] * training_conf["num_agents"]
+            states = [[0.0] * agent_opt["state_space"]] * training_conf["num_agents"]
             efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf["num_agents"]
 
             score = 0
@@ -227,11 +228,11 @@ if __name__ == "__main__":
 
                     if efforts[index] <= 1:
                         efforts[index] = 1
-
+                
                 next_states, rewards, done = env.step(efforts)
 
                 score += sum(rewards)
-
+                
                 for index, player in enumerate(agent_list):
                     player.save_transition(states[index], actions[index], rewards[index], next_states[index])
 
@@ -246,10 +247,10 @@ if __name__ == "__main__":
                 [player.learn(global_step) for player in agent_list]
 
             score /= training_conf["num_agents"]
-            '''
+            
             print("episode: {}/{}, score: {}, e: {:.2}"
-                  .format(epoch, env_conf["train_epochs"], score, agent_list[0].epsilon))
-            '''
+                  .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
+            
             avg_scores.append(score)
 
         for a in agent_list:
