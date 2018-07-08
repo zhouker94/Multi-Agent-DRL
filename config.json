@@ -23,7 +23,7 @@
     "model_save_path": "../log/agent_model/"
   },
   "dqn": {
-    "state_space": 2,
+    "state_space": 4,
     "action_space": 3,
     "learning_rate": 0.001,
     "init_epsilon": 1.0,

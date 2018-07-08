@@ -6,13 +6,14 @@
 # @Software: PyCharm Community Edition
 
 
-import base_agent
+from agents import base_agent
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import json
 import sys
+
 sys.path.append("../")
 import environment
 
@@ -175,7 +176,7 @@ if __name__ == "__main__":
     training_conf["num_agents"] = parsed_args.n_agents
     env = environment.GameEnv(env_conf)
 
-    dir_conf, opt = conf["dir_config"], conf["ddpg"]
+    dir_conf, agent_opt = conf["dir_config"], conf["ddpg"]
     dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
                                   str(env_conf["sustain_weight"]) + '_' + \
                                   str(training_conf["num_agents"]) + '/'
@@ -189,12 +190,12 @@ if __name__ == "__main__":
 
         agent_list = []
         for i in range(training_conf["num_agents"]):
-            player = DDPGAgent("DDPG_" + str(i), opt)
+            player = DDPGAgent("DDPG_" + str(i), agent_opt)
             player.start(dir_path=dir_conf["model_save_path"])
             agent_list.append(player)
 
         for epoch in range(training_conf["train_epochs"]):
-            if agent_list[0].epsilon <= opt["min_epsilon"]:
+            if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
                 break
 
             # state -> [X, Pi]
@@ -212,7 +213,7 @@ if __name__ == "__main__":
                     if action <= 0:
                         action = 1
                     efforts[index] = action
-                
+
                 next_state, rewards, done = env.step(efforts)
                 score += sum(rewards)
 
@@ -257,7 +258,7 @@ if __name__ == "__main__":
     else:
         agent_list = []
         for i in range(training_conf["num_agents"]):
-            player = DDPGAgent("DDPG_" + str(i), opt, learning_mode=False)
+            player = DDPGAgent("DDPG_" + str(i), agent_opt, learning_mode=False)
             player.start(dir_path=dir_conf["model_save_path"])
             agent_list.append(player)
 

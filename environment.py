@@ -42,21 +42,27 @@ class GameEnv(object):
         return rewards
 
     def step(self, efforts):
+
         effort_sum = sum(efforts)
 
-        # change environment
+        # interact with environment
         harvest_level = self.harvest_func(effort_sum, self.common_resource_pool)
         delta_n = int(self.growth_func(self.common_resource_pool) - harvest_level)
         self.common_resource_pool += delta_n
 
         # get feedback from env
         pi_list = list(map(lambda x: x / effort_sum * harvest_level - self.conf["cost_c"] * x, efforts))
+        pi_sum = sum(pi_list)
+
         game_is_done = False
         if self.common_resource_pool <= 0:
             game_is_done = True
 
-        return [effort_sum, sum(pi_list)], self.reward_func(delta_n, pi_list), game_is_done
+        next_states = []
+        for index, (x, pi) in enumerate(zip(efforts, pi_list)):
+            next_states.append([x, pi_list[index], effort_sum, pi_sum])
+
+        return next_states, self.reward_func(delta_n, pi_list), game_is_done
 
     def reset(self):
         self.common_resource_pool = self.conf["resource_capacity_init"]
-        return [0.0, 0.0]

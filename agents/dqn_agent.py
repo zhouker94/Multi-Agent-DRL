@@ -4,11 +4,17 @@
 # @Author  : Hanwei Zhu
 # @File    : dqn_agent.py
 
-
+import argparse
+import matplotlib.pyplot as plt
+import json
 import numpy as np
 import tensorflow as tf
 from agents import base_agent
 import random
+import sys
+
+sys.path.append("../")
+import environment
 
 
 class DqnAgent(base_agent.BaseAgent):
@@ -25,10 +31,9 @@ class DqnAgent(base_agent.BaseAgent):
 
         with tf.variable_scope('eval_net_' + self._name):
             batch_norm_state = tf.layers.batch_normalization(self._state)
-            layer_norm_state = tf.contrib.layers.layer_norm(batch_norm_state)
 
             with tf.variable_scope('phi_net'):
-                phi_state_layer_1 = tf.layers.dense(layer_norm_state,
+                phi_state_layer_1 = tf.layers.dense(batch_norm_state,
                                                     self.opt["fully_connected_layer_1_node_num"],
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
@@ -59,10 +64,9 @@ class DqnAgent(base_agent.BaseAgent):
 
         with tf.variable_scope('target_net_' + self._name):
             batch_norm_next_state = tf.layers.batch_normalization(self._next_state)
-            layer_norm_next_state = tf.contrib.layers.layer_norm(batch_norm_next_state)
 
             with tf.variable_scope('phi_net'):
-                phi_state_next_layer_1 = tf.layers.dense(layer_norm_next_state,
+                phi_state_next_layer_1 = tf.layers.dense(batch_norm_next_state,
                                                          self.opt["fully_connected_layer_1_node_num"],
                                                          kernel_initializer=w_initializer,
                                                          bias_initializer=b_initializer,
@@ -151,8 +155,190 @@ class DqnAgent(base_agent.BaseAgent):
         Choose an action
         """
         if not self._learning_mode or random.random() >= self.epsilon:
-            action = np.argmax(self.sess.run(self.action_output,
-                                             feed_dict={self._state: state}))
+            return np.argmax(self.sess.run(self.action_output,
+                                           feed_dict={self._state: state}))
         else:
-            action = np.random.randint(self.opt["action_space"])
-        return action
+            return np.random.randint(self.opt["action_space"])
+
+
+if __name__ == "__main__":
+
+    # -------------- parameters initialize --------------
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--n_agents', type=int, default=1)
+    parser.add_argument('--sustainable_weight', type=float, default=0.5)
+    parser.add_argument('--is_test', type=bool, default=False)
+    parser.add_argument('--replenishment_rate', type=float, default=0.5)
+    parsed_args = parser.parse_args()
+
+    conf = json.load(open('../config.json', 'r'))
+    training_conf = conf["training_config"]
+    training_conf["num_agents"] = parsed_args.n_agents
+
+    env_conf = conf["env_config"]
+    env_conf["sustain_weight"] = parsed_args.sustainable_weight
+    env_conf["replenishment_rate"] = parsed_args.replenishment_rate
+    env = environment.GameEnv(env_conf)
+
+    dir_conf, agent_opt = conf["dir_config"], conf["dqn"]
+    dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
+                                  str(env_conf["sustain_weight"]) + '_' + \
+                                  str(training_conf["num_agents"]) + '/'
+
+    avg_scores = []
+    global_step = 0
+
+    # -------------- start train mode --------------
+
+    if not parsed_args.is_test:
+
+        agent_list = []
+        for i in range(training_conf["num_agents"]):
+            player = DqnAgent("DQN_" + str(i), agent_opt)
+            player.start(dir_path=dir_conf["model_save_path"])
+            agent_list.append(player)
+
+        for epoch in range(training_conf["train_epochs"]):
+            if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
+                break
+
+            env.reset()
+
+            states = [[0] * agent_opt["state_space"]] * training_conf["num_agents"]
+            efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf["num_agents"]
+
+            score = 0
+
+            for time in range(training_conf["max_round"]):
+                # actions -> [Increase effort, Decrease effort, IDLE]
+                actions = [0] * training_conf["num_agents"]
+
+                for index, player in enumerate(agent_list):
+                    action = player.choose_action(np.expand_dims(states[index], axis=0))
+                    actions[index] = action
+
+                    # increase
+                    if action == 0:
+                        efforts[index] += training_conf["min_increment"]
+                    # decrease
+                    elif action == 1:
+                        efforts[index] -= training_conf["min_increment"]
+
+                    if efforts[index] <= 1:
+                        efforts[index] = 1
+
+                next_states, rewards, done = env.step(efforts)
+
+                score += sum(rewards)
+
+                for index, player in enumerate(agent_list):
+                    player.save_transition(states[index], actions[index], rewards[index], next_states[index])
+
+                states = next_states
+
+                global_step += 1
+
+                if done:
+                    break
+
+            if not epoch % 2:
+                [player.learn(global_step) for player in agent_list]
+
+            score /= training_conf["num_agents"]
+            '''
+            print("episode: {}/{}, score: {}, e: {:.2}"
+                  .format(epoch, env_conf["train_epochs"], score, agent_list[0].epsilon))
+            '''
+            avg_scores.append(score)
+
+        for a in agent_list:
+            a.save(dir_path=dir_conf["model_save_path"])
+            a.sess.close()
+
+        # -------------- save results --------------
+
+        plt.switch_backend('agg')
+        plt.plot(avg_scores)
+        plt.interactive(False)
+        plt.xlabel('Epoch')
+        plt.ylabel('Avg score')
+        plt.savefig(dir_conf["model_save_path"] + 'dqn_training_plot')
+
+        with open(dir_conf["model_save_path"] + 'dqn_avg_score.txt', "w+") as f:
+            for r in avg_scores:
+                f.write(str(r) + '\n')
+
+    # -------------- start test mode --------------
+
+    else:
+        agent_list = []
+        for i in range(training_conf["num_agents"]):
+            player = DqnAgent("DQN_" + str(i), agent_opt, learning_mode=False)
+            player.start(dir_path=dir_conf["model_save_path"])
+            agent_list.append(player)
+
+        resource_level = []
+        for epoch in range(1):
+            # state -> [X, Pi]
+            state = env.reset()
+
+            efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf["num_agents"]
+            score = 0
+
+            for time in range(training_conf["max_round"]):
+                resource_level.append(env.common_resource_pool)
+
+                # actions -> [Increase effort, Decrease effort, IDLE]
+                actions = [0] * training_conf["num_agents"]
+
+                for index, player in enumerate(agent_list):
+                    action = player.choose_action(np.expand_dims(state, axis=0))
+                    actions[index] = action
+
+                    # increase
+                    if action == 0:
+                        efforts[index] += training_conf["min_increment"]
+                    # decrease
+                    elif action == 1:
+                        efforts[index] -= training_conf["min_increment"]
+
+                    if efforts[index] <= 1:
+                        efforts[index] = 1
+
+                next_state, rewards, done = env.step(efforts)
+                score = sum(rewards)
+                score /= training_conf["num_agents"]
+                avg_scores.append(score)
+                state = next_state
+
+                global_step += 1
+
+                if done:
+                    break
+
+            print("episode: {}/{}, score: {}, e: {:.2}"
+                  .format(epoch, training_conf["test_epochs"], score, agent_list[0].epsilon))
+
+        for a in agent_list:
+            a.sess.close()
+
+        # -------------- save results --------------
+
+        plt.switch_backend('agg')
+        plt.plot(avg_scores)
+        plt.interactive(False)
+        plt.xlabel('Epoch')
+        plt.ylabel('Avg score')
+        plt.savefig(dir_conf["model_save_path"] + 'dqn_test_plot')
+
+        with open(dir_conf["model_save_path"] + 'dqn_test_avg_score.txt', "w+") as f:
+            for r in avg_scores:
+                f.write(str(r) + '\n')
+
+        with open(dir_conf["model_save_path"] + 'dqn_' + str(
+                env_conf["replenishment_rate"]) + "_test_resource_level.txt",
+                  "w+") as f:
+
+            for r in resource_level:
+                f.write(str(r) + '\n')

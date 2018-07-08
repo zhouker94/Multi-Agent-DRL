@@ -14,6 +14,11 @@ from agents.layers import Layer
 class DrqnAgent(base_agent.BaseAgent):
     def __init__(self, name, opt, learning_mode=True):
         super().__init__(name, opt, learning_mode)
+        self.s_buffer = np.zeros((self.opt["memory_size"], 300, self.opt["state_space"]))
+        self.r_buffer = np.zeros((self.opt["memory_size"], 1))
+        self.a_buffer = np.zeros((self.opt["memory_size"], self.opt["action_space"]))
+
+        self.buffer_count = 0
 
     def _build_model(self):
         w_initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
@@ -40,6 +45,7 @@ class DrqnAgent(base_agent.BaseAgent):
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
                                                     name='Q_predict')
+
             # tf.summary.histogram('q_values_predict', self.q_values_predict)
 
             with tf.variable_scope('q_predict'):
