@@ -30,7 +30,7 @@ class DqnAgent(base_agent.BaseAgent):
         b_initializer = tf.constant_initializer(0.1)
 
         with tf.variable_scope('eval_net_' + self._name):
-            batch_norm_state = tf.layers.batch_normalization(self._state)
+            batch_norm_state = tf.contrib.layers.batch_norm(self._state)
 
             with tf.variable_scope('phi_net'):
                 phi_state_layer_1 = tf.layers.dense(batch_norm_state,
@@ -64,7 +64,7 @@ class DqnAgent(base_agent.BaseAgent):
                 self.action_output = tf.argmax(self.q_values_predict)
 
         with tf.variable_scope('target_net_' + self._name):
-            batch_norm_next_state = tf.layers.batch_normalization(self._next_state)
+            batch_norm_next_state = tf.contrib.layers.batch_norm(self._next_state)
 
             with tf.variable_scope('phi_net'):
                 phi_state_next_layer_1 = tf.layers.dense(batch_norm_next_state,
@@ -189,6 +189,7 @@ if __name__ == "__main__":
 
     avg_scores = []
     global_step = 0
+    phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in training_conf["num_agents"]]
 
     # -------------- start train mode --------------
 
@@ -228,13 +229,14 @@ if __name__ == "__main__":
 
                     if efforts[index] <= 1:
                         efforts[index] = 1
-                
+
                 next_states, rewards, done = env.step(efforts)
 
                 score += sum(rewards)
-                
+
                 for index, player in enumerate(agent_list):
-                    player.save_transition(states[index], actions[index], rewards[index], next_states[index])
+                    phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(states[index])
+                    player.save_transition(phi_state[index], actions[index], rewards[index], next_states[index])
 
                 states = next_states
 
@@ -247,10 +249,10 @@ if __name__ == "__main__":
                 [player.learn(global_step) for player in agent_list]
 
             score /= training_conf["num_agents"]
-            
+
             print("episode: {}/{}, score: {}, e: {:.2}"
                   .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
-            
+
             avg_scores.append(score)
 
         for a in agent_list:
