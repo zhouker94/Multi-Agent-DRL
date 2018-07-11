@@ -6,7 +6,7 @@
 # @Software: PyCharm Community Edition
 
 
-from agents import base_agent
+import base_agent
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -58,7 +58,7 @@ class DDPGAgent(base_agent.BaseAgent):
         w_init, b_init = tf.random_normal_initializer(.0, .001), tf.constant_initializer(.001)
 
         with tf.variable_scope(scope):
-            batch_norm_state = tf.layers.batch_normalization(state)
+            batch_norm_state = tf.contrib.layers.batch_norm(state)
             phi_state_layer_1 = tf.layers.dense(batch_norm_state,
                                                 self.opt["fully_connected_layer_1_node_num"],
                                                 tf.nn.relu,
@@ -94,7 +94,7 @@ class DDPGAgent(base_agent.BaseAgent):
         w_init, b_init = tf.random_normal_initializer(.0, .001), tf.constant_initializer(.001)
 
         with tf.variable_scope(scope):
-            batch_norm_state = tf.layers.batch_normalization(state)
+            batch_norm_state = tf.contrib.layers.batch_norm(state)
             phi_state = tf.layers.dense(batch_norm_state,
                                         32,
                                         kernel_initializer=w_init,
@@ -183,6 +183,7 @@ if __name__ == "__main__":
 
     avg_scores = []
     global_step = 0
+    phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in range(training_conf["num_agents"])]
 
     # -------------- start train mode --------------
 
@@ -199,7 +200,7 @@ if __name__ == "__main__":
                 break
 
             # state -> [X, Pi]
-            state = env.reset()
+            env.reset()
 
             efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
                 "num_agents"]
@@ -208,18 +209,22 @@ if __name__ == "__main__":
             for time in range(training_conf["max_round"]):
                 actions = [0] * training_conf["num_agents"]
                 for index, player in enumerate(agent_list):
-                    action = player.choose_action(np.expand_dims(state, axis=0),
+                    action = player.choose_action(np.expand_dims(np.mean(phi_state[index], axis=0), axis=0),
                                                   env.common_resource_pool / training_conf["num_agents"])
                     if action <= 0:
                         action = 1
                     efforts[index] = action
 
-                next_state, rewards, done = env.step(efforts)
+                next_states, rewards, done = env.step(efforts)
+                
                 score += sum(rewards)
 
-                [player.save_transition(state, actions[index], rewards[index], next_state)
-                 for index, player in enumerate(agent_list)]
-                state = next_state
+                for index, player in enumerate(agent_list):
+                    phi_curr_state = np.mean(phi_state[index], axis=0)
+                    phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
+                    phi_next_state = np.mean(phi_state[index], axis=0)
+                    
+                    player.save_transition(phi_curr_state, actions[index], rewards[index], phi_next_state)
 
                 global_step += 1
 

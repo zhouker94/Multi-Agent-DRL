@@ -48,8 +48,13 @@ class DqnAgent(base_agent.BaseAgent):
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
                                                     activation=tf.nn.relu)
+                phi_state_layer_4 = tf.layers.dense(phi_state_layer_3,
+                                                    self.opt["fully_connected_layer_4_node_num"],
+                                                    kernel_initializer=w_initializer,
+                                                    bias_initializer=b_initializer,
+                                                    activation=tf.nn.relu)
 
-            self.q_values_predict = tf.layers.dense(phi_state_layer_3,
+            self.q_values_predict = tf.layers.dense(phi_state_layer_4,
                                                     self.opt["action_space"],
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
@@ -82,8 +87,13 @@ class DqnAgent(base_agent.BaseAgent):
                                                          kernel_initializer=w_initializer,
                                                          bias_initializer=b_initializer,
                                                          activation=tf.nn.relu)
+                phi_state_next_layer_4 = tf.layers.dense(phi_state_next_layer_3,
+                                                         self.opt["fully_connected_layer_4_node_num"],
+                                                         kernel_initializer=w_initializer,
+                                                         bias_initializer=b_initializer,
+                                                         activation=tf.nn.relu)
 
-            self.q_values_target = tf.layers.dense(phi_state_next_layer_3,
+            self.q_values_target = tf.layers.dense(phi_state_next_layer_4,
                                                    self.opt["action_space"],
                                                    kernel_initializer=w_initializer,
                                                    bias_initializer=b_initializer,
@@ -189,7 +199,7 @@ if __name__ == "__main__":
 
     avg_scores = []
     global_step = 0
-    phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in training_conf["num_agents"]]
+    phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in range(training_conf["num_agents"])]
 
     # -------------- start train mode --------------
 
@@ -207,7 +217,6 @@ if __name__ == "__main__":
 
             env.reset()
 
-            states = [[0.0] * agent_opt["state_space"]] * training_conf["num_agents"]
             efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf["num_agents"]
 
             score = 0
@@ -217,7 +226,7 @@ if __name__ == "__main__":
                 actions = [0] * training_conf["num_agents"]
 
                 for index, player in enumerate(agent_list):
-                    action = player.choose_action(np.expand_dims(states[index], axis=0))
+                    action = player.choose_action(np.expand_dims(np.mean(phi_state[index], axis=0), axis=0))
                     actions[index] = action
 
                     # increase
@@ -235,10 +244,12 @@ if __name__ == "__main__":
                 score += sum(rewards)
 
                 for index, player in enumerate(agent_list):
-                    phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(states[index])
-                    player.save_transition(phi_state[index], actions[index], rewards[index], next_states[index])
-
-                states = next_states
+                    
+                    phi_curr_state = np.mean(phi_state[index], axis=0)
+                    phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
+                    phi_next_state = np.mean(phi_state[index], axis=0)
+                    
+                    player.save_transition(phi_curr_state, actions[index], rewards[index], phi_next_state)
 
                 global_step += 1
 
@@ -284,19 +295,20 @@ if __name__ == "__main__":
         resource_level = []
         for epoch in range(1):
             # state -> [X, Pi]
-            state = env.reset()
+            env.reset()
 
             efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf["num_agents"]
+
             score = 0
 
             for time in range(training_conf["max_round"]):
                 resource_level.append(env.common_resource_pool)
-
+                
                 # actions -> [Increase effort, Decrease effort, IDLE]
                 actions = [0] * training_conf["num_agents"]
 
                 for index, player in enumerate(agent_list):
-                    action = player.choose_action(np.expand_dims(state, axis=0))
+                    action = player.choose_action(np.expand_dims(np.mean(phi_state[index], axis=0), axis=0))
                     actions[index] = action
 
                     # increase
@@ -309,11 +321,14 @@ if __name__ == "__main__":
                     if efforts[index] <= 1:
                         efforts[index] = 1
 
-                next_state, rewards, done = env.step(efforts)
-                score = sum(rewards)
+                next_states, rewards, done = env.step(efforts)
+
+                score += sum(rewards)
                 score /= training_conf["num_agents"]
                 avg_scores.append(score)
-                state = next_state
+
+                for index, player in enumerate(agent_list):
+                    phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
 
                 global_step += 1
 
@@ -345,3 +360,4 @@ if __name__ == "__main__":
 
             for r in resource_level:
                 f.write(str(r) + '\n')
+        

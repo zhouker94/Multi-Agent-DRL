@@ -48,7 +48,8 @@ class BaseAgent(object):
         if self._learning_mode:
             self.sess.run(self.init_op)
         else:
-            if os.path.exists(dir_path + self._name):
+            dir_path += self._name + '/'
+            if os.path.exists(dir_path):
                 self.saver.restore(self.sess, dir_path + self._name)
                 print("load successfully")
             else:
