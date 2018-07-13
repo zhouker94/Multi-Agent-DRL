@@ -199,7 +199,6 @@ if __name__ == "__main__":
             if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
                 break
 
-            # state -> [X, Pi]
             env.reset()
 
             efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
@@ -211,8 +210,8 @@ if __name__ == "__main__":
                 for index, player in enumerate(agent_list):
                     action = player.choose_action(np.expand_dims(np.mean(phi_state[index], axis=0), axis=0),
                                                   env.common_resource_pool / training_conf["num_agents"])
-                    if action <= 0:
-                        action = 1
+                    if action < agent_opt["action_lower_bound"]:
+                        action = agent_opt["action_lower_bound"]
                     efforts[index] = action
 
                 next_states, rewards, done = env.step(efforts)
