@@ -199,7 +199,8 @@ if __name__ == "__main__":
 
     avg_scores = []
     global_step = 0
-    phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in range(training_conf["num_agents"])]
+    phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in
+                 range(training_conf["num_agents"])]
 
     # -------------- start train mode --------------
 
@@ -244,11 +245,10 @@ if __name__ == "__main__":
                 score += sum(rewards)
 
                 for index, player in enumerate(agent_list):
-                    
                     phi_curr_state = np.mean(phi_state[index], axis=0)
                     phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
                     phi_next_state = np.mean(phi_state[index], axis=0)
-                    
+
                     player.save_transition(phi_curr_state, actions[index], rewards[index], phi_next_state)
 
                 global_step += 1
@@ -303,7 +303,7 @@ if __name__ == "__main__":
 
             for time in range(training_conf["max_round"]):
                 resource_level.append(env.common_resource_pool)
-                
+
                 # actions -> [Increase effort, Decrease effort, IDLE]
                 actions = [0] * training_conf["num_agents"]
 
@@ -360,4 +360,3 @@ if __name__ == "__main__":
 
             for r in resource_level:
                 f.write(str(r) + '\n')
-        

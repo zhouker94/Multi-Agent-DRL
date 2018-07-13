@@ -42,6 +42,7 @@
     "summary_path": "../log/dqn_graph/"
   },
   "drqn": {
+    "max_round": 300,
     "state_space": 4,
     "action_space": 3,
     "learning_rate": 0.001,
@@ -55,7 +56,7 @@
     "gru_nodes_nums": [
         32,
         32
-     ]
+     ],
     "summary_path": "../log/drqn_graph/"
   },
   "ddpg": {
