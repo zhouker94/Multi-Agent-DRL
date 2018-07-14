@@ -11,7 +11,7 @@ import numpy as np
 import sys
 import tensorflow as tf
 
-from agents import base_agent
+import base_agent
 import json
 
 sys.path.append("../")
@@ -124,18 +124,18 @@ class DRQNAgent(base_agent.BaseAgent):
             sample_indices = np.random.choice(self.buffer_count, size=self.opt["batch_size"])
 
         batch = self.buffer[sample_indices, :, :]
-        batch_s = batch[:, :, :self.state_dim]
-        batch_a = batch[:, :, self.state_dim]
-        batch_r = batch[:, :, self.state_dim + 1]
+        batch_s = batch[:, :, :self.opt["state_space"]]
+        batch_a = batch[:, :, self.opt["state_space"]]
+        batch_r = batch[:, :, self.opt["state_space"] + 1]
 
         for step in range(self.opt["max_round"]):
             _, cost = self.sess.run(
                 [self.train_op, self.loss],
                 feed_dict={
-                    self._state: batch_s[:, :step],
-                    self._action: batch_a,
-                    self._reward: batch_r,
-                    self._next_state: batch_s[:, :(step + 1)],
+                    self._state: batch_s[:, :(step + 1)],
+                    self._action: batch_a[:, step],
+                    self._reward: batch_r[:, step],
+                    self._next_state: batch_s[:, :(step + 2)],
                 }
             )
 
@@ -155,14 +155,16 @@ class DRQNAgent(base_agent.BaseAgent):
         else:
             return np.random.randint(self.opt["action_space"])
 
-    def save_transition(self, epoch, state, action, reward):
+    def save_transition(self, step, state, action, reward, done):
         """
         Save transition to buffer
         """
-        transition = np.hstack((state, [action, reward], state_next))
+        transition = np.hstack((state, [action, reward]))
         index = self.buffer_count % self.opt["memory_size"]
-        self.buffer[epoch, index, :] = transition
-        self.buffer_count += 1
+        self.buffer[index, step, :] = transition
+        
+        if done:
+            self.buffer_count += 1
 
 '''
 def agent_test():
@@ -209,7 +211,7 @@ if __name__ == "__main__":
 
         agent_list = []
         for i in range(training_conf["num_agents"]):
-            player = DqnAgent("DRQN_" + str(i), agent_opt)
+            player = DRQNAgent("DRQN_" + str(i), agent_opt)
             player.start(dir_path=dir_conf["model_save_path"])
             agent_list.append(player)
 
@@ -247,14 +249,14 @@ if __name__ == "__main__":
 
                 for index, player in enumerate(agent_list):
                     phi_states[index][time, :] = np.asarray(next_states[index])
-                    player.save_transition(epoch, next_states[index], actions[index], rewards[index])
+                    player.save_transition(time, next_states[index], actions[index], rewards[index], done)
 
                 global_step += 1
 
                 if done:
                     break
 
-            if not epoch % 2:
+            if not epoch % 5:
                 [player.learn(global_step) for player in agent_list]
 
             score /= training_conf["num_agents"]
