@@ -21,9 +21,8 @@ import environment
 class DRQNAgent(base_agent.BaseAgent):
     def __init__(self, name, opt, learning_mode=True):
         super().__init__(name, opt, learning_mode)
-        self.s_buffer = np.zeros((self.opt["memory_size"], self.opt["max_round"], self.opt["state_space"]))
-        self.r_buffer = np.zeros((self.opt["memory_size"], 1))
-        self.a_buffer = np.zeros((self.opt["memory_size"], self.opt["action_space"]))
+        self.buffer = np.zeros((self.opt["memory_size"], self.opt["max_round"],
+                                self.opt["state_space"] + 1 + 1))
 
         self.buffer_count = 0
 
@@ -124,18 +123,19 @@ class DRQNAgent(base_agent.BaseAgent):
         else:
             sample_indices = np.random.choice(self.buffer_count, size=self.opt["batch_size"])
 
-        batch_s = self.s_buffer[sample_indices, :, :]
-        batch_a = self.a_buffer[sample_indices, :]
-        batch_r = self.r_buffer[sample_indices, :]
+        batch = self.buffer[sample_indices, :, :]
+        batch_s = batch[:, :, :self.state_dim]
+        batch_a = batch[:, :, self.state_dim]
+        batch_r = batch[:, :, self.state_dim + 1]
 
         for step in range(self.opt["max_round"]):
             _, cost = self.sess.run(
                 [self.train_op, self.loss],
                 feed_dict={
-                    self._state: batch_s[:, :step, :],
+                    self._state: batch_s[:, :step],
                     self._action: batch_a,
                     self._reward: batch_r,
-                    self._next_state: batch_s[:, :(step + 1), :],
+                    self._next_state: batch_s[:, :(step + 1)],
                 }
             )
 
@@ -155,14 +155,13 @@ class DRQNAgent(base_agent.BaseAgent):
         else:
             return np.random.randint(self.opt["action_space"])
 
-    def save_transition(self, state, action, reward):
+    def save_transition(self, epoch, state, action, reward):
         """
         Save transition to buffer
         """
+        transition = np.hstack((state, [action, reward], state_next))
         index = self.buffer_count % self.opt["memory_size"]
-        self.s_buffer[index, :, :] = state
-        self.a_buffer[index, :] = action
-        self.r_buffer[index, :] = reward
+        self.buffer[epoch, index, :] = transition
         self.buffer_count += 1
 
 '''
@@ -201,6 +200,83 @@ if __name__ == "__main__":
 
     avg_scores = []
     global_step = 0
-    phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in
+    phi_states = [np.zeros((training_conf["max_round"], agent_opt["state_space"])) for _ in
                  range(training_conf["num_agents"])]
 
+    # -------------- start train mode --------------
+
+    if not parsed_args.is_test:
+
+        agent_list = []
+        for i in range(training_conf["num_agents"]):
+            player = DqnAgent("DRQN_" + str(i), agent_opt)
+            player.start(dir_path=dir_conf["model_save_path"])
+            agent_list.append(player)
+
+        for epoch in range(training_conf["train_epochs"]):
+            if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
+                break
+
+            env.reset()
+
+            efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf["num_agents"]
+
+            score = 0
+
+            for time in range(training_conf["max_round"]):
+                # actions -> [Increase effort, Decrease effort, IDLE]
+                actions = [0] * training_conf["num_agents"]
+
+                for index, player in enumerate(agent_list):
+                    action = player.choose_action(np.expand_dims(phi_states[index], axis=0))
+                    actions[index] = action
+
+                    # increase
+                    if action == 0:
+                        efforts[index] += training_conf["min_increment"]
+                    # decrease
+                    elif action == 1:
+                        efforts[index] -= training_conf["min_increment"]
+
+                    if efforts[index] <= 1:
+                        efforts[index] = 1
+
+                next_states, rewards, done = env.step(efforts)
+
+                score += sum(rewards)
+
+                for index, player in enumerate(agent_list):
+                    phi_states[index][time, :] = np.asarray(next_states[index])
+                    player.save_transition(epoch, next_states[index], actions[index], rewards[index])
+
+                global_step += 1
+
+                if done:
+                    break
+
+            if not epoch % 2:
+                [player.learn(global_step) for player in agent_list]
+
+            score /= training_conf["num_agents"]
+
+            print("episode: {}/{}, score: {}, e: {:.2}"
+                  .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
+
+            avg_scores.append(score)
+
+        for a in agent_list:
+            a.save(dir_path=dir_conf["model_save_path"])
+            a.sess.close()
+
+        # -------------- save results --------------
+
+        plt.switch_backend('agg')
+        plt.plot(avg_scores)
+        plt.interactive(False)
+        plt.xlabel('Epoch')
+        plt.ylabel('Avg score')
+        plt.savefig(dir_conf["model_save_path"] + 'drqn_training_plot')
+
+        with open(dir_conf["model_save_path"] + 'drqn_avg_score.txt', "w+") as f:
+            for r in avg_scores:
+                f.write(str(r) + '\n')
