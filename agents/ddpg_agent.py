@@ -268,9 +268,8 @@ if __name__ == "__main__":
 
         resource_level = []
         for epoch in range(1):
-            # state -> [X, Pi]
-            state = env.reset()
 
+            env.reset()
             efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
                 "num_agents"]
             score = 0
@@ -278,21 +277,25 @@ if __name__ == "__main__":
             for time in range(training_conf["max_round"]):
                 resource_level.append(env.common_resource_pool)
 
+                actions = [0] * training_conf["num_agents"]
                 for index, player in enumerate(agent_list):
-                    action = player.choose_action(np.expand_dims(state, axis=0),
+                    action = player.choose_action(np.expand_dims(np.mean(phi_state[index], axis=0), axis=0),
                                                   env.common_resource_pool / training_conf["num_agents"])
+                    if action < agent_opt["action_lower_bound"]:
+                        action = agent_opt["action_lower_bound"]
                     efforts[index] = action
 
-                next_state, rewards, done = env.step(efforts)
+                next_states, rewards, done = env.step(efforts)
+                
                 score += sum(rewards)
-                state = next_state
+
+                for index, player in enumerate(agent_list):
+                    phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
+
                 global_step += 1
 
                 if done:
                     break
-
-            print("episode: {}/{}, score: {}, e: {:.2}"
-                  .format(epoch, training_conf["test_epochs"], score, agent_list[0].epsilon))
 
         for a in agent_list:
             a.sess.close()
@@ -306,9 +309,11 @@ if __name__ == "__main__":
         plt.ylabel('Avg score')
         plt.savefig(dir_conf["model_save_path"] + 'ddpg_test_plot')
 
+        '''
         with open(dir_conf["model_save_path"] + 'ddpg_test_avg_score.txt', "w+") as f:
             for r in avg_scores:
                 f.write(str(r) + '\n')
+        '''
 
         with open(dir_conf["model_save_path"] + "ddpg_test_resource_level.txt", "w+") as f:
             for r in resource_level:
