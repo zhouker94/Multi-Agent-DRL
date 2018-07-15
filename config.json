@@ -3,6 +3,7 @@
     "toy_env": "CartPole-v0",
     "num_agents": 1,
     "max_round": 300,
+    "test_max_round": 8000,
     "train_epochs": 10000,
     "test_epochs": 10,
     "total_init_effort": 300,

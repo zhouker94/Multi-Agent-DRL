@@ -265,7 +265,8 @@ if __name__ == "__main__":
             player = DDPGAgent("DDPG_" + str(i), agent_opt, learning_mode=False)
             player.start(dir_path=dir_conf["model_save_path"])
             agent_list.append(player)
-
+        
+        assets = [0] * training_conf["num_agents"]
         resource_level = []
         for epoch in range(1):
 
@@ -274,7 +275,7 @@ if __name__ == "__main__":
                 "num_agents"]
             score = 0
 
-            for time in range(training_conf["max_round"]):
+            for time in range(training_conf["test_max_round"]):
                 resource_level.append(env.common_resource_pool)
 
                 actions = [0] * training_conf["num_agents"]
@@ -290,6 +291,7 @@ if __name__ == "__main__":
                 score += sum(rewards)
 
                 for index, player in enumerate(agent_list):
+                    assets[index] += next_states[index][1]
                     phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
 
                 global_step += 1
@@ -309,11 +311,9 @@ if __name__ == "__main__":
         plt.ylabel('Avg score')
         plt.savefig(dir_conf["model_save_path"] + 'ddpg_test_plot')
 
-        '''
-        with open(dir_conf["model_save_path"] + 'ddpg_test_avg_score.txt', "w+") as f:
-            for r in avg_scores:
-                f.write(str(r) + '\n')
-        '''
+        with open(dir_conf["model_save_path"] + 'ddpg_test_assets.txt', "w+") as f:
+            for a in assets:
+                f.write(str(a) + '\n')
 
         with open(dir_conf["model_save_path"] + "ddpg_test_resource_level.txt", "w+") as f:
             for r in resource_level:
