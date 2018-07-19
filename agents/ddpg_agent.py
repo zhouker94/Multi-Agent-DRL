@@ -251,29 +251,30 @@ if __name__ == "__main__":
         plt.interactive(False)
         plt.xlabel('Epoch')
         plt.ylabel('Avg score')
-        plt.savefig(dir_conf["model_save_path"] + 'ddpg_training_plot')
+        plt.savefig(dir_conf["model_save_path"] + 'ddpg/training_plot')
 
-        with open(dir_conf["model_save_path"] + 'ddpg_avg_score.txt', "w+") as f:
+        with open(dir_conf["model_save_path"] + 'ddpg/avg_score.txt', "w+") as f:
             for r in avg_scores:
                 f.write(str(r) + '\n')
 
     # -------------- start test mode --------------
 
     else:
+
         agent_list = []
         for i in range(training_conf["num_agents"]):
             player = DDPGAgent("DDPG_" + str(i), agent_opt, learning_mode=False)
             player.start(dir_path=dir_conf["model_save_path"])
             agent_list.append(player)
         
-        assets = [0] * training_conf["num_agents"]
+        avg_assets = [0]
         resource_level = []
         for epoch in range(1):
 
             env.reset()
             efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
                 "num_agents"]
-            score = 0
+            avg_scores = []
 
             for time in range(training_conf["test_max_round"]):
                 resource_level.append(env.common_resource_pool)
@@ -287,11 +288,11 @@ if __name__ == "__main__":
                     efforts[index] = action
 
                 next_states, rewards, done = env.step(efforts)
-                
-                score += sum(rewards)
+
+                avg_scores.append(sum(rewards) / training_conf["num_agents"])
+                avg_assets.append(next_states[3] / training_conf["num_agents"]) 
 
                 for index, player in enumerate(agent_list):
-                    assets[index] += next_states[index][1]
                     phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
 
                 global_step += 1
@@ -304,17 +305,14 @@ if __name__ == "__main__":
 
         # -------------- save results --------------
 
-        plt.switch_backend('agg')
-        plt.plot(avg_scores)
-        plt.interactive(False)
-        plt.xlabel('Epoch')
-        plt.ylabel('Avg score')
-        plt.savefig(dir_conf["model_save_path"] + 'ddpg_test_plot')
+        with open(dir_conf["model_save_path"] + 'ddpg/avg_scores.txt', "w+") as f:
+            for s in avg_scores:
+                f.write(str(s) + '\n')
 
-        with open(dir_conf["model_save_path"] + 'ddpg_test_assets.txt', "w+") as f:
-            for a in assets:
+        with open(dir_conf["model_save_path"] + 'ddpg/test_assets.txt', "w+") as f:
+            for a in avg_assets:
                 f.write(str(a) + '\n')
 
-        with open(dir_conf["model_save_path"] + "ddpg_test_resource_level.txt", "w+") as f:
+        with open(dir_conf["model_save_path"] + "ddpg/test_resource_level.txt", "w+") as f:
             for r in resource_level:
                 f.write(str(r) + '\n')
