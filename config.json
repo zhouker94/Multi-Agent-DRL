@@ -63,7 +63,7 @@
   "ddpg": {
     "time_steps": 4,
     "action_upper_bound": 500.0,
-    "action_lower_bound": 10,
+    "action_lower_bound": 10.0,
     "tau": 0.01,
     "state_space": 4,
     "action_space": 1,

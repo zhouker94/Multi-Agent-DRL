@@ -55,7 +55,7 @@ class GameEnv(object):
         pi_sum = sum(pi_list)
 
         game_is_done = False
-        if self.common_resource_pool <= 0:
+        if self.common_resource_pool <= 5.0:
             game_is_done = True
 
         next_states = []

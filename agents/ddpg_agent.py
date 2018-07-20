@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import argparse
 import json
 import sys
+import os
 
 sys.path.append("../")
 import environment
@@ -163,23 +164,34 @@ if __name__ == "__main__":
     # -------------- parameters initialize --------------
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--n_agents', type=int, default=1)
-    parser.add_argument('--sustainable_weight', type=float, default=0.5)
-    parser.add_argument('--is_test', type=bool, default=False)
+    parser.add_argument('--n_agents', type=int, default=1,
+                        help='the number of agents')
+    parser.add_argument('--sustain_weight', type=float, default=0.5,
+                        help='weight of sustainability')
+    parser.add_argument('--is_test', type=bool, default=False,
+                        help='is testing mode')
+    parser.add_argument('--v', type=str, default="v_00",
+                        help='current version')
     parsed_args = parser.parse_args()
 
     conf = json.load(open('../config.json', 'r'))
     training_conf = conf["training_config"]
 
     env_conf = conf["env_config"]
-    env_conf["sustain_weight"] = parsed_args.sustainable_weight
+    env_conf["sustain_weight"] = parsed_args.sustain_weight
     training_conf["num_agents"] = parsed_args.n_agents
+    curr_version = parsed_args.v
+
     env = environment.GameEnv(env_conf)
 
     dir_conf, agent_opt = conf["dir_config"], conf["ddpg"]
     dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
                                   str(env_conf["sustain_weight"]) + '_' + \
                                   str(training_conf["num_agents"]) + '/'
+
+    RESULT_PATH = dir_conf["model_save_path"] + 'ddpg_results/' + curr_version + '/'
+    if not os.path.exists(RESULT_PATH):
+        os.makedirs(RESULT_PATH)
 
     avg_scores = []
     global_step = 0
@@ -251,9 +263,9 @@ if __name__ == "__main__":
         plt.interactive(False)
         plt.xlabel('Epoch')
         plt.ylabel('Avg score')
-        plt.savefig(dir_conf["model_save_path"] + 'ddpg/training_plot')
+        plt.savefig(RESULT_PATH + 'training_plot')
 
-        with open(dir_conf["model_save_path"] + 'ddpg/avg_score.txt', "w+") as f:
+        with open(RESULT_PATH + 'avg_score.txt', "w+") as f:
             for r in avg_scores:
                 f.write(str(r) + '\n')
 
@@ -290,7 +302,7 @@ if __name__ == "__main__":
                 next_states, rewards, done = env.step(efforts)
 
                 avg_scores.append(sum(rewards) / training_conf["num_agents"])
-                avg_assets.append(next_states[3] / training_conf["num_agents"]) 
+                avg_assets.append(next_states[0][3] / training_conf["num_agents"]) 
 
                 for index, player in enumerate(agent_list):
                     phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
@@ -305,14 +317,14 @@ if __name__ == "__main__":
 
         # -------------- save results --------------
 
-        with open(dir_conf["model_save_path"] + 'ddpg/avg_scores.txt', "w+") as f:
+        with open(RESULT_PATH + 'avg_scores.txt', "w+") as f:
             for s in avg_scores:
                 f.write(str(s) + '\n')
 
-        with open(dir_conf["model_save_path"] + 'ddpg/test_assets.txt', "w+") as f:
+        with open(RESULT_PATH + 'test_assets.txt', "w+") as f:
             for a in avg_assets:
                 f.write(str(a) + '\n')
 
-        with open(dir_conf["model_save_path"] + "ddpg/test_resource_level.txt", "w+") as f:
+        with open(RESULT_PATH + "test_resource_level.txt", "w+") as f:
             for r in resource_level:
                 f.write(str(r) + '\n')
