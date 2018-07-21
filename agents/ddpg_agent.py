@@ -109,13 +109,19 @@ class DDPGAgent(base_agent.BaseAgent):
                                          bias_initializer=b_init,
                                          trainable=trainable)
 
-            phi_state_action = tf.layers.dense(tf.nn.relu(phi_state + phi_action),
+            phi_state_action_1 = tf.layers.dense(tf.nn.relu(phi_state + phi_action),
+                                               32,
+                                               kernel_initializer=w_init,
+                                               bias_initializer=b_init,
+                                               trainable=trainable)
+            
+            phi_state_action_2 = tf.layers.dense(phi_state_action_1,
                                                32,
                                                kernel_initializer=w_init,
                                                bias_initializer=b_init,
                                                trainable=trainable)
 
-            q_value = tf.layers.dense(phi_state_action,
+            q_value = tf.layers.dense(phi_state_action_2,
                                       1,
                                       kernel_initializer=w_init,
                                       bias_initializer=b_init,
@@ -189,72 +195,85 @@ if __name__ == "__main__":
                                   str(env_conf["sustain_weight"]) + '_' + \
                                   str(training_conf["num_agents"]) + '/'
 
-    RESULT_PATH = dir_conf["model_save_path"] + 'ddpg_results/' + curr_version + '/'
-    if not os.path.exists(RESULT_PATH):
-        os.makedirs(RESULT_PATH)
-
     avg_scores = []
     global_step = 0
     phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in range(training_conf["num_agents"])]
 
     # -------------- start train mode --------------
 
-    if not parsed_args.is_test:
+    for t in training_conf["num_trial"]:
+        
+        curr_version = 'v_' + str(t)
+        RESULT_PATH = dir_conf["model_save_path"] + 'ddpg_results/' + curr_version + '/'
+        if not os.path.exists(RESULT_PATH):
+            os.makedirs(RESULT_PATH)
+            
+        training_complete = True
+        while not training_complete:
+            agent_list = []
+            for i in range(training_conf["num_agents"]):
+                player = DDPGAgent("DDPG_" + str(i), agent_opt)
+                player.start(dir_path=dir_conf["model_save_path"])
+                agent_list.append(player)
 
-        agent_list = []
-        for i in range(training_conf["num_agents"]):
-            player = DDPGAgent("DDPG_" + str(i), agent_opt)
-            player.start(dir_path=dir_conf["model_save_path"])
-            agent_list.append(player)
-
-        for epoch in range(training_conf["train_epochs"]):
-            if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
-                break
-
-            env.reset()
-
-            efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
-                "num_agents"]
-            score = 0
-
-            for time in range(training_conf["max_round"]):
-                actions = [0] * training_conf["num_agents"]
-                for index, player in enumerate(agent_list):
-                    action = player.choose_action(np.expand_dims(np.mean(phi_state[index], axis=0), axis=0),
-                                                  env.common_resource_pool / training_conf["num_agents"])
-                    if action < agent_opt["action_lower_bound"]:
-                        action = agent_opt["action_lower_bound"]
-                    efforts[index] = action
-
-                next_states, rewards, done = env.step(efforts)
-                
-                score += sum(rewards)
-
-                for index, player in enumerate(agent_list):
-                    phi_curr_state = np.mean(phi_state[index], axis=0)
-                    phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
-                    phi_next_state = np.mean(phi_state[index], axis=0)
-                    
-                    player.save_transition(phi_curr_state, actions[index], rewards[index], phi_next_state)
-
-                global_step += 1
-
-                if done:
+            for epoch in range(training_conf["train_epochs"]):
+                if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
                     break
 
-            if not epoch % 2:
-                [player.learn(global_step) for player in agent_list]
+                env.reset()
 
-            score /= training_conf["num_agents"]
+                efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
+                    "num_agents"]
+                score = 0
 
-            print("episode: {}/{}, score: {}, e: {:.2}"
-                  .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
+                for time in range(training_conf["max_round"]):
+                    actions = [0] * training_conf["num_agents"]
+                    for index, player in enumerate(agent_list):
+                        action = player.choose_action(np.expand_dims(np.mean(phi_state[index], axis=0), axis=0),
+                                                      env.common_resource_pool / training_conf["num_agents"])
+                        action = int(action)
+                        if action < agent_opt["action_lower_bound"]:
+                            action = agent_opt["action_lower_bound"]
+                        efforts[index] = action
 
-            avg_scores.append(score)
+                    next_states, rewards, done = env.step(efforts)
 
-        for a in agent_list:
-            a.save(dir_path=dir_conf["model_save_path"])
-            a.sess.close()
+                    score += sum(rewards)
+
+                    for index, player in enumerate(agent_list):
+                        phi_curr_state = np.mean(phi_state[index], axis=0)
+                        phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
+                        phi_next_state = np.mean(phi_state[index], axis=0)
+
+                        player.save_transition(phi_curr_state, actions[index], rewards[index], phi_next_state)
+
+                    global_step += 1
+
+                    if done:
+                        break
+
+                if not epoch % 2:
+                    [player.learn(global_step) for player in agent_list]
+
+                score /= training_conf["num_agents"]
+
+                print("episode: {}/{}, score: {}, e: {:.2}"
+                      .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
+
+                avg_scores.append(score)
+                
+                # 'early stoping'
+                if score < -100:
+                    break
+
+            # Can explore a good policy
+            if avg_scores[-1] > -100:
+                training_complete = True
+                
+            for a in agent_list:
+                a.sess.close()
+                if training_complete:
+                    a.save(dir_path=dir_conf["model_save_path"])
 
         # -------------- save results --------------
 
@@ -270,8 +289,6 @@ if __name__ == "__main__":
                 f.write(str(r) + '\n')
 
     # -------------- start test mode --------------
-
-    else:
 
         agent_list = []
         for i in range(training_conf["num_agents"]):
