@@ -1,10 +1,10 @@
 #!/bin/bash
 
 cd agents/
-for num in 10
+for num in 1 2 4 6 8 10
 do
-    for w in 0.5 0.7 0.8 0.9 1.0
+    for w in 0.0 0.2 0.4 0.6 0.8 1.0
         do
-            python ddpg_agent.py --n_agents=${num} --sustainable_weight=${w}
+            python ddpg_agent.py --n_agents=${num} --sustain_weight=${w}
         done
 done

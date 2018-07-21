@@ -206,6 +206,8 @@ if __name__ == "__main__":
 
         curr_version = 'v_' + str(t)
         RESULT_PATH = dir_conf["model_save_path"] + 'ddpg_results/' + curr_version + '/'
+        MODEL_PATH = dir_conf["model_save_path"] + curr_version + '/'
+
         if not os.path.exists(RESULT_PATH):
             os.makedirs(RESULT_PATH)
 
@@ -275,7 +277,7 @@ if __name__ == "__main__":
                 
             for a in agent_list:
                 if training_complete:
-                    a.save(dir_path=dir_conf["model_save_path"] + curr_version + '/')
+                    a.save(dir_path=MODEL_PATH)
                 a.sess.close()
 
         # -------------- save results --------------
@@ -294,7 +296,7 @@ if __name__ == "__main__":
     # -------------- start test mode --------------
 
         for agt in agent_list:
-            agt.start(learning_mode=False, dir_path=dir_conf["model_save_path"] + curr_version)
+            agt.start(learning_mode=False, dir_path=MODEL_PATH)
         
         avg_assets = [0]
         resource_level = []
