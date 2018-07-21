@@ -12,13 +12,11 @@ from abc import abstractmethod
 
 
 class BaseAgent(object):
-    def __init__(self, name, opt, learning_mode=True):
+    def __init__(self, name, opt):
         self._name = name
         self.opt = opt
-        self.epsilon = self.opt["init_epsilon"]
         self.gamma = self.opt["gamma"]
         self._learning_rate = self.opt["learning_rate"]
-        self._learning_mode = learning_mode
 
         self._state = tf.placeholder(tf.float32,
                                      shape=[None, self.opt["state_space"]],
@@ -36,16 +34,19 @@ class BaseAgent(object):
         self._build_model()
         self.merged = tf.summary.merge_all()
         self.init_op = tf.global_variables_initializer()
-        self.sess = tf.Session()
         self.saver = tf.train.Saver()
         # self.writer = tf.summary.FileWriter(self.opt["summary_path"] + self._name + '/', self.sess.graph)
         np.random.seed(seed=hash(self._name) % 256)
 
-    def start(self, dir_path=""):
+    def start(self, learning_mode, dir_path=""):
         """
         Start: new/load a session
         """
+        self._learning_mode = learning_mode
+        self.sess = tf.Session()
+        
         if self._learning_mode:
+            self.epsilon = self.opt["init_epsilon"]
             self.sess.run(self.init_op)
         else:
             dir_path += self._name + '/'

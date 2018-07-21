@@ -20,8 +20,8 @@ import environment
 
 
 class DDPGAgent(base_agent.BaseAgent):
-    def __init__(self, name, opt, learning_mode=True):
-        super().__init__(name, opt, learning_mode)
+    def __init__(self, name, opt):
+        super().__init__(name, opt)
         self.buffer = np.zeros((self.opt["memory_size"], self.opt["state_space"] * 2 + self.opt["action_space"] + 1))
         self.buffer_item_count = 0
 
@@ -195,27 +195,30 @@ if __name__ == "__main__":
                                   str(env_conf["sustain_weight"]) + '_' + \
                                   str(training_conf["num_agents"]) + '/'
 
-    avg_scores = []
-    global_step = 0
-    phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in range(training_conf["num_agents"])]
+    agent_list = []
+    for i in range(training_conf["num_agents"]):
+        agt = DDPGAgent("DDPG_" + str(i), agent_opt)
+        agent_list.append(agt)
 
     # -------------- start train mode --------------
+    
+    for t in range(training_conf["num_trial"]):          
 
-    for t in training_conf["num_trial"]:
-        
         curr_version = 'v_' + str(t)
         RESULT_PATH = dir_conf["model_save_path"] + 'ddpg_results/' + curr_version + '/'
         if not os.path.exists(RESULT_PATH):
             os.makedirs(RESULT_PATH)
-            
-        training_complete = True
-        while not training_complete:
-            agent_list = []
-            for i in range(training_conf["num_agents"]):
-                player = DDPGAgent("DDPG_" + str(i), agent_opt)
-                player.start(dir_path=dir_conf["model_save_path"])
-                agent_list.append(player)
 
+        training_complete = False
+        while not training_complete:
+
+            avg_scores = []
+            global_step = 0
+            phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in range(training_conf["num_agents"])]
+
+            for agt in agent_list:
+                agt.start(learning_mode = True)
+            
             for epoch in range(training_conf["train_epochs"]):
                 if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
                     break
@@ -271,9 +274,9 @@ if __name__ == "__main__":
                 training_complete = True
                 
             for a in agent_list:
-                a.sess.close()
                 if training_complete:
-                    a.save(dir_path=dir_conf["model_save_path"])
+                    a.save(dir_path=dir_conf["model_save_path"] + curr_version + '/')
+                a.sess.close()
 
         # -------------- save results --------------
 
@@ -284,27 +287,24 @@ if __name__ == "__main__":
         plt.ylabel('Avg score')
         plt.savefig(RESULT_PATH + 'training_plot')
 
-        with open(RESULT_PATH + 'avg_score.txt', "w+") as f:
+        with open(RESULT_PATH + 'train_avg_score.txt', "w+") as f:
             for r in avg_scores:
                 f.write(str(r) + '\n')
 
     # -------------- start test mode --------------
 
-        agent_list = []
-        for i in range(training_conf["num_agents"]):
-            player = DDPGAgent("DDPG_" + str(i), agent_opt, learning_mode=False)
-            player.start(dir_path=dir_conf["model_save_path"])
-            agent_list.append(player)
+        for agt in agent_list:
+            agt.start(learning_mode=False, dir_path=dir_conf["model_save_path"] + curr_version)
         
         avg_assets = [0]
         resource_level = []
         for epoch in range(1):
-
             env.reset()
             efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
                 "num_agents"]
             avg_scores = []
-
+            phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in range(training_conf["num_agents"])]
+            
             for time in range(training_conf["test_max_round"]):
                 resource_level.append(env.common_resource_pool)
 
@@ -334,7 +334,7 @@ if __name__ == "__main__":
 
         # -------------- save results --------------
 
-        with open(RESULT_PATH + 'avg_scores.txt', "w+") as f:
+        with open(RESULT_PATH + 'test_avg_score.txt', "w+") as f:
             for s in avg_scores:
                 f.write(str(s) + '\n')
 
