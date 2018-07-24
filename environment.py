@@ -51,7 +51,7 @@ class GameEnv(object):
         self.common_resource_pool += delta_n
 
         # get feedback from env
-        pi_list = list(map(lambda x: x / effort_sum * harvest_level - self.conf["cost_c"] * x, efforts))
+        pi_list = list(map(lambda x: x / float(effort_sum) * harvest_level - self.conf["cost_c"] * x, efforts))
         pi_sum = sum(pi_list)
 
         game_is_done = False
