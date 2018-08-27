@@ -36,7 +36,7 @@ class BaseAgent(object):
         self.init_op = tf.global_variables_initializer()
         self.saver = tf.train.Saver()
         # self.writer = tf.summary.FileWriter(self.opt["summary_path"] + self._name + '/', self.sess.graph)
-        np.random.seed(seed=hash(self._name) % 256)
+        # np.random.seed(seed=hash(self._name) % 256)
 
     def start(self, learning_mode, dir_path=""):
         """

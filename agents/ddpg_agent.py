@@ -158,9 +158,7 @@ class DDPGAgent(base_agent.BaseAgent):
         self.epsilon -= self.opt["epsilon_decay"]
 
     def choose_action(self, state, upper_bound):
-        print("state:", state)
         action = self.sess.run(self.a_predict, feed_dict={self._state: state, self._phase: False})
-        print("action", action)
         exploration_scale = 1000 * self.epsilon
         action = np.clip(np.random.normal(action[0], exploration_scale), 0, upper_bound)
         return action[0]
@@ -270,8 +268,7 @@ if __name__ == "__main__":
                 avg_scores.append(score)
 
             # Can explore a good policy
-            if avg_scores[-1] > -50:
-                training_complete = True
+            training_complete = True
                 
             for a in agent_list:
                 if training_complete:
