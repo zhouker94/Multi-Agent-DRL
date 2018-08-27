@@ -1,0 +1,6 @@
+model_checkpoint_path: "DDPG_0"
+all_model_checkpoint_paths: "../../v_5/DDPG_0/DDPG_0"
+all_model_checkpoint_paths: "../../v_6/DDPG_0/DDPG_0"
+all_model_checkpoint_paths: "../../v_7/DDPG_0/DDPG_0"
+all_model_checkpoint_paths: "../../v_8/DDPG_0/DDPG_0"
+all_model_checkpoint_paths: "DDPG_0"
