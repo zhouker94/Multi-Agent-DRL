@@ -19,8 +19,8 @@ import environment
 
 
 class DqnAgent(base_agent.BaseAgent):
-    def __init__(self, name, opt, learning_mode=True):
-        super().__init__(name, opt, learning_mode)
+    def __init__(self, name, opt):
+        super().__init__(name, opt)
         self.buffer = np.zeros((self.opt["memory_size"],
                                 self.opt["state_space"] + 1 + 1 + self.opt["state_space"]))
         self.buffer_count = 0
@@ -201,7 +201,6 @@ if __name__ == "__main__":
     agent_list = []
     for i in range(training_conf["num_agents"]):
         agt = DqnAgent("DQN_" + str(i), agent_opt)
-        agt.start(dir_path=dir_conf["model_save_path"])
         agent_list.append(agt)
 
     # -------------- start train mode --------------
@@ -279,7 +278,7 @@ if __name__ == "__main__":
             avg_scores.append(score)
 
         for a in agent_list:
-            a.save(dir_path=dir_conf["model_save_path"])
+            a.save(dir_path=MODEL_PATH)
             a.sess.close()
 
         # -------------- save results --------------
