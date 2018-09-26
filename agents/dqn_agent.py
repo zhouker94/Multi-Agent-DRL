@@ -12,6 +12,7 @@ import tensorflow as tf
 import base_agent
 import random
 import sys
+import os
 
 sys.path.append("../")
 import environment
@@ -30,10 +31,10 @@ class DqnAgent(base_agent.BaseAgent):
         b_initializer = tf.constant_initializer(0.1)
 
         with tf.variable_scope('eval_net_' + self._name):
-            batch_norm_state = tf.contrib.layers.batch_norm(self._state)
+            # batch_norm_state = tf.contrib.layers.batch_norm(self._state)
 
             with tf.variable_scope('phi_net'):
-                phi_state_layer_1 = tf.layers.dense(batch_norm_state,
+                phi_state_layer_1 = tf.layers.dense(self._state,
                                                     self.opt["fully_connected_layer_1_node_num"],
                                                     kernel_initializer=w_initializer,
                                                     bias_initializer=b_initializer,
@@ -69,10 +70,10 @@ class DqnAgent(base_agent.BaseAgent):
                 self.action_output = tf.argmax(self.q_values_predict)
 
         with tf.variable_scope('target_net_' + self._name):
-            batch_norm_next_state = tf.contrib.layers.batch_norm(self._next_state)
+            # batch_norm_next_state = tf.contrib.layers.batch_norm(self._next_state)
 
             with tf.variable_scope('phi_net'):
-                phi_state_next_layer_1 = tf.layers.dense(batch_norm_next_state,
+                phi_state_next_layer_1 = tf.layers.dense(self._next_state,
                                                          self.opt["fully_connected_layer_1_node_num"],
                                                          kernel_initializer=w_initializer,
                                                          bias_initializer=b_initializer,
@@ -197,22 +198,33 @@ if __name__ == "__main__":
                                   str(env_conf["sustain_weight"]) + '_' + \
                                   str(training_conf["num_agents"]) + '/'
 
-    avg_scores = []
-    global_step = 0
-    phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in
-                 range(training_conf["num_agents"])]
+    agent_list = []
+    for i in range(training_conf["num_agents"]):
+        agt = DqnAgent("DQN_" + str(i), agent_opt)
+        agt.start(dir_path=dir_conf["model_save_path"])
+        agent_list.append(agt)
 
     # -------------- start train mode --------------
 
-    if not parsed_args.is_test:
+    for t in range(training_conf["num_trial"]):
 
-        agent_list = []
-        for i in range(training_conf["num_agents"]):
-            player = DqnAgent("DQN_" + str(i), agent_opt)
-            player.start(dir_path=dir_conf["model_save_path"])
-            agent_list.append(player)
+        curr_version = 'v_' + str(t)
+        RESULT_PATH = dir_conf["model_save_path"] + 'dqn_results/' + curr_version + '/'
+        MODEL_PATH = dir_conf["model_save_path"] + curr_version + '/'
+
+        if not os.path.exists(RESULT_PATH):
+            os.makedirs(RESULT_PATH)
+
+        avg_scores = []
+        global_step = 0
+        phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in
+                     range(training_conf["num_agents"])]
+
+        for agt in agent_list:
+            agt.start(learning_mode=True)
 
         for epoch in range(training_conf["train_epochs"]):
+
             if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
                 break
 
@@ -279,19 +291,16 @@ if __name__ == "__main__":
         plt.ylabel('Avg score')
         plt.savefig(dir_conf["model_save_path"] + 'dqn_training_plot')
 
-        with open(dir_conf["model_save_path"] + 'dqn_avg_score.txt', "w+") as f:
+        with open(RESULT_PATH + 'train_avg_score.txt', "w+") as f:
             for r in avg_scores:
                 f.write(str(r) + '\n')
 
-    # -------------- start test mode --------------
+        # -------------- start test mode --------------
 
-    else:
-        agent_list = []
-        for i in range(training_conf["num_agents"]):
-            player = DqnAgent("DQN_" + str(i), agent_opt, learning_mode=False)
-            player.start(dir_path=dir_conf["model_save_path"])
-            agent_list.append(player)
+        for agt in agent_list:
+            agt.start(learning_mode=False, dir_path=MODEL_PATH)
 
+        avg_assets = [0]
         resource_level = []
         for epoch in range(1):
             # state -> [X, Pi]
@@ -326,6 +335,7 @@ if __name__ == "__main__":
                 score += sum(rewards)
                 score /= training_conf["num_agents"]
                 avg_scores.append(score)
+                avg_assets.append(avg_assets[-1] + next_states[0][3] / training_conf["num_agents"])
 
                 for index, player in enumerate(agent_list):
                     phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
@@ -350,13 +360,14 @@ if __name__ == "__main__":
         plt.ylabel('Avg score')
         plt.savefig(dir_conf["model_save_path"] + 'dqn_test_plot')
 
-        with open(dir_conf["model_save_path"] + 'dqn_test_avg_score.txt', "w+") as f:
-            for r in avg_scores:
-                f.write(str(r) + '\n')
+        with open(RESULT_PATH + 'test_avg_score.txt', "w+") as f:
+            for s in avg_scores:
+                f.write(str(s) + '\n')
 
-        with open(dir_conf["model_save_path"] + 'dqn_' + str(
-                env_conf["replenishment_rate"]) + "_test_resource_level.txt",
-                  "w+") as f:
+        with open(RESULT_PATH + 'test_assets.txt', "w+") as f:
+            for a in avg_assets:
+                f.write(str(a) + '\n')
 
+        with open(RESULT_PATH + "test_resource_level.txt", "w+") as f:
             for r in resource_level:
                 f.write(str(r) + '\n')

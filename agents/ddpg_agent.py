@@ -61,7 +61,7 @@ class DDPGAgent(base_agent.BaseAgent):
 
         with tf.variable_scope(scope):
             # batch_norm_state = tf.layers.batch_normalization(state, axis=0)
-            batch_norm_state = tf.contrib.layers.batch_norm(state, center=True, scale=True, is_training=phase)
+            # batch_norm_state = tf.contrib.layers.batch_norm(state, center=True, scale=True, is_training=phase)
             
             phi_state_layer_1 = tf.layers.dense(state,
                                                 self.opt["fully_connected_layer_1_node_num"],
@@ -98,14 +98,14 @@ class DDPGAgent(base_agent.BaseAgent):
         w_init, b_init = tf.random_normal_initializer(.0, .1), tf.constant_initializer(.1)
 
         with tf.variable_scope(scope):
-            batch_norm_state = tf.contrib.layers.batch_norm(state, center=True, scale=True, is_training=phase, trainable=trainable)
+            # batch_norm_state = tf.contrib.layers.batch_norm(state, center=True, scale=True, is_training=phase, trainable=trainable)
             phi_state = tf.layers.dense(state,
                                         32,
                                         kernel_initializer=w_init,
                                         bias_initializer=b_init,
                                         trainable=trainable)
 
-            batch_norm_action = tf.contrib.layers.batch_norm(action, center=True, scale=True, is_training=phase, trainable=trainable)
+            # batch_norm_action = tf.contrib.layers.batch_norm(action, center=True, scale=True, is_training=phase, trainable=trainable)
             phi_action = tf.layers.dense(action,
                                          32,
                                          kernel_initializer=w_init,
@@ -212,68 +212,61 @@ if __name__ == "__main__":
         if not os.path.exists(RESULT_PATH):
             os.makedirs(RESULT_PATH)
 
-        training_complete = False
-        while not training_complete:
+        avg_scores = []
+        global_step = 0
+        phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in range(training_conf["num_agents"])]
 
-            avg_scores = []
-            global_step = 0
-            phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in range(training_conf["num_agents"])]
+        for agt in agent_list:
+            agt.start(learning_mode=True)
+        
+        for epoch in range(training_conf["train_epochs"]):
+            if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
+                break
 
-            for agt in agent_list:
-                agt.start(learning_mode = True)
-            
-            for epoch in range(training_conf["train_epochs"]):
-                if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
+            env.reset()
+
+            efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
+                "num_agents"]
+            score = 0.0
+
+            for time in range(training_conf["max_round"]):
+                actions = [0] * training_conf["num_agents"]
+                for index, player in enumerate(agent_list):
+                    phi_curr_state = np.expand_dims(np.mean(phi_state[index], axis=0), axis=0)
+                    action = player.choose_action(phi_curr_state,
+                                                  UPPER_BOUND)
+                    action = int(action)
+                    if action < agent_opt["action_lower_bound"]:
+                        action = agent_opt["action_lower_bound"]
+                    efforts[index] = action
+
+                next_states, rewards, done = env.step(efforts)
+
+                score += sum(rewards) / training_conf["num_agents"]
+
+                for index, player in enumerate(agent_list):
+                    phi_curr_state = np.mean(phi_state[index], axis=0)
+                    phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
+                    phi_next_state = np.mean(phi_state[index], axis=0)
+
+                    player.save_transition(phi_curr_state, actions[index], rewards[index], phi_next_state)
+
+                global_step += 1
+
+                if done:
                     break
 
-                env.reset()
+            if not epoch % 2:
+                [player.learn(global_step) for player in agent_list]
 
-                efforts = [training_conf["total_init_effort"] / training_conf["num_agents"]] * training_conf[
-                    "num_agents"]
-                score = 0.0
+            print("episode: {}/{}, score: {}, e: {:.2}"
+                  .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
 
-                for time in range(training_conf["max_round"]):
-                    actions = [0] * training_conf["num_agents"]
-                    for index, player in enumerate(agent_list):
-                        phi_curr_state = np.expand_dims(np.mean(phi_state[index], axis=0), axis=0)
-                        action = player.choose_action(phi_curr_state,
-                                                      UPPER_BOUND)
-                        action = int(action)
-                        if action < agent_opt["action_lower_bound"]:
-                            action = agent_opt["action_lower_bound"]
-                        efforts[index] = action
-
-                    next_states, rewards, done = env.step(efforts)
-
-                    score += sum(rewards) / training_conf["num_agents"]
-
-                    for index, player in enumerate(agent_list):
-                        phi_curr_state = np.mean(phi_state[index], axis=0)
-                        phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
-                        phi_next_state = np.mean(phi_state[index], axis=0)
-
-                        player.save_transition(phi_curr_state, actions[index], rewards[index], phi_next_state)
-
-                    global_step += 1
-
-                    if done:
-                        break
-
-                if not epoch % 2:
-                    [player.learn(global_step) for player in agent_list]
-
-                print("episode: {}/{}, score: {}, e: {:.2}"
-                      .format(epoch, training_conf["train_epochs"], score, agent_list[0].epsilon))
-
-                avg_scores.append(score)
-
-            # Can explore a good policy
-            training_complete = True
-                
-            for a in agent_list:
-                if training_complete:
-                    a.save(dir_path=MODEL_PATH)
-                a.sess.close()
+            avg_scores.append(score)
+            
+        for a in agent_list:
+            a.save(dir_path=MODEL_PATH)
+            a.sess.close()
 
         # -------------- save results --------------
 
@@ -288,7 +281,7 @@ if __name__ == "__main__":
             for r in avg_scores:
                 f.write(str(r) + '\n')
 
-    # -------------- start test mode --------------
+        # -------------- start test mode --------------
 
         for agt in agent_list:
             agt.start(learning_mode=False, dir_path=MODEL_PATH)
