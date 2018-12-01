@@ -2,134 +2,179 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2018/4/25 15:09
 # @Author  : Hanwei Zhu
-# @File    : dqn_agent.py
+# @File    : dqn.py
 
 import argparse
 import matplotlib.pyplot as plt
 import json
 import numpy as np
 import tensorflow as tf
-import base_agent
+from model import base_model
 import random
-import sys
 import os
 
-sys.path.append("../")
-import environment
 
+class DQNModel(base_model.BaseModel):
+    def __init__(self, aid, config):
+        super().__init__(aid, config)
 
-class DqnAgent(base_agent.BaseAgent):
-    def __init__(self, name, opt):
-        super().__init__(name, opt)
-        self.buffer = np.zeros((self.opt["memory_size"],
-                                self.opt["state_space"] + 1 + 1 + self.opt["state_space"]))
+        self.buffer = np.zeros(
+            (self.config["memory_size"],
+             self.config["state_space"] + 1 + 1 + self.config["state_space"])
+        )
+        self.epsilon = self.config["init_epsilon"]
         self.buffer_count = 0
 
-    def _build_model(self):
+    def _build_graph(self):
         # w, b initializer
         w_initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
         b_initializer = tf.constant_initializer(0.1)
 
-        with tf.variable_scope('eval_net_' + self._name):
+        with tf.variable_scope('eval_net_' + self.aid):
             # batch_norm_state = tf.contrib.layers.batch_norm(self._state)
-
             with tf.variable_scope('phi_net'):
-                phi_state_layer_1 = tf.layers.dense(self._state,
-                                                    self.opt["fully_connected_layer_1_node_num"],
-                                                    kernel_initializer=w_initializer,
-                                                    bias_initializer=b_initializer,
-                                                    activation=tf.nn.relu)
-                phi_state_layer_2 = tf.layers.dense(phi_state_layer_1,
-                                                    self.opt["fully_connected_layer_2_node_num"],
-                                                    kernel_initializer=w_initializer,
-                                                    bias_initializer=b_initializer,
-                                                    activation=tf.nn.relu)
-                phi_state_layer_3 = tf.layers.dense(phi_state_layer_2,
-                                                    self.opt["fully_connected_layer_3_node_num"],
-                                                    kernel_initializer=w_initializer,
-                                                    bias_initializer=b_initializer,
-                                                    activation=tf.nn.relu)
-                phi_state_layer_4 = tf.layers.dense(phi_state_layer_3,
-                                                    self.opt["fully_connected_layer_4_node_num"],
-                                                    kernel_initializer=w_initializer,
-                                                    bias_initializer=b_initializer,
-                                                    activation=tf.nn.relu)
+                phi_state_layer_1 = tf.layers.dense(
+                    self._state,
+                    self.config["fully_connected_layer_1_node_num"],
+                    kernel_initializer=w_initializer,
+                    bias_initializer=b_initializer,
+                    activation=tf.nn.relu
+                )
+                phi_state_layer_2 = tf.layers.dense(
+                    phi_state_layer_1,
+                    self.config["fully_connected_layer_2_node_num"],
+                    kernel_initializer=w_initializer,
+                    bias_initializer=b_initializer,
+                    activation=tf.nn.relu
+                )
+                phi_state_layer_3 = tf.layers.dense(
+                    phi_state_layer_2,
+                    self.config["fully_connected_layer_3_node_num"],
+                    kernel_initializer=w_initializer,
+                    bias_initializer=b_initializer,
+                    activation=tf.nn.relu)
+                phi_state_layer_4 = tf.layers.dense(
+                    phi_state_layer_3,
+                    self.config["fully_connected_layer_4_node_num"],
+                    kernel_initializer=w_initializer,
+                    bias_initializer=b_initializer,
+                    activation=tf.nn.relu)
 
-            self.q_values_predict = tf.layers.dense(phi_state_layer_4,
-                                                    self.opt["action_space"],
-                                                    kernel_initializer=w_initializer,
-                                                    bias_initializer=b_initializer,
-                                                    name='Q_predict')
+            self.q_values_predict = tf.layers.dense(
+                phi_state_layer_4,
+                self.config["action_space"],
+                kernel_initializer=w_initializer,
+                bias_initializer=b_initializer,
+                name='Q_predict')
 
             # tf.summary.histogram('q_values_predict', self.q_values_predict)
 
             with tf.variable_scope('q_predict'):
                 # size of q_value_predict is [BATCH_SIZE, 1]
-                action_indices = tf.stack([tf.range(tf.shape(self._action)[0], dtype=tf.int32), self._action], axis=1)
+                action_indices = tf.stack(
+                    [
+                        tf.range(tf.shape(self._action)[0], dtype=tf.int32),
+                        self._action
+                    ],
+                    axis=1
+                )
                 self.q_value_predict = tf.gather_nd(self.q_values_predict, action_indices)
                 self.action_output = tf.argmax(self.q_values_predict)
 
-        with tf.variable_scope('target_net_' + self._name):
+        with tf.variable_scope('target_net_' + self.aid):
             # batch_norm_next_state = tf.contrib.layers.batch_norm(self._next_state)
 
             with tf.variable_scope('phi_net'):
-                phi_state_next_layer_1 = tf.layers.dense(self._next_state,
-                                                         self.opt["fully_connected_layer_1_node_num"],
-                                                         kernel_initializer=w_initializer,
-                                                         bias_initializer=b_initializer,
-                                                         activation=tf.nn.relu)
-                phi_state_next_layer_2 = tf.layers.dense(phi_state_next_layer_1,
-                                                         self.opt["fully_connected_layer_2_node_num"],
-                                                         kernel_initializer=w_initializer,
-                                                         bias_initializer=b_initializer,
-                                                         activation=tf.nn.relu)
-                phi_state_next_layer_3 = tf.layers.dense(phi_state_next_layer_2,
-                                                         self.opt["fully_connected_layer_3_node_num"],
-                                                         kernel_initializer=w_initializer,
-                                                         bias_initializer=b_initializer,
-                                                         activation=tf.nn.relu)
-                phi_state_next_layer_4 = tf.layers.dense(phi_state_next_layer_3,
-                                                         self.opt["fully_connected_layer_4_node_num"],
-                                                         kernel_initializer=w_initializer,
-                                                         bias_initializer=b_initializer,
-                                                         activation=tf.nn.relu)
+                phi_state_next_layer_1 = tf.layers.dense(
+                    self._next_state,
+                    self.config["fully_connected_layer_1_node_num"],
+                    kernel_initializer=w_initializer,
+                    bias_initializer=b_initializer,
+                    activation=tf.nn.relu
+                )
+                phi_state_next_layer_2 = tf.layers.dense(
+                    phi_state_next_layer_1,
+                    self.config["fully_connected_layer_2_node_num"],
+                    kernel_initializer=w_initializer,
+                    bias_initializer=b_initializer,
+                    activation=tf.nn.relu
+                )
+                phi_state_next_layer_3 = tf.layers.dense(
+                    phi_state_next_layer_2,
+                    self.config["fully_connected_layer_3_node_num"],
+                    kernel_initializer=w_initializer,
+                    bias_initializer=b_initializer,
+                    activation=tf.nn.relu
+                )
+                phi_state_next_layer_4 = tf.layers.dense(
+                    phi_state_next_layer_3,
+                    self.config["fully_connected_layer_4_node_num"],
+                    kernel_initializer=w_initializer,
+                    bias_initializer=b_initializer,
+                    activation=tf.nn.relu
+                )
 
-            self.q_values_target = tf.layers.dense(phi_state_next_layer_4,
-                                                   self.opt["action_space"],
-                                                   kernel_initializer=w_initializer,
-                                                   bias_initializer=b_initializer,
-                                                   name='Q_target')
+            self.q_values_target = tf.layers.dense(
+                phi_state_next_layer_4,
+                self.config["action_space"],
+                kernel_initializer=w_initializer,
+                bias_initializer=b_initializer,
+                name='Q_target'
+            )
 
             with tf.variable_scope('q_real'):
                 # size of q_value_real is [BATCH_SIZE, 1]
                 q_value_max = tf.reduce_max(self.q_values_target, axis=1)
-                q_value_real = self._reward + self.gamma * q_value_max
+                q_value_real = self._reward + \
+                    self.config["gamma"] * q_value_max
                 self.q_value_real = tf.stop_gradient(q_value_real)
 
         with tf.variable_scope('loss'):
-            self.loss = tf.reduce_mean(tf.squared_difference(self.q_value_real, self.q_value_predict, name='mse'))
+            self.loss = tf.reduce_mean(
+                tf.squared_difference(
+                    self.q_value_real,
+                    self.q_value_predict,
+                    name='mse'
+                )
+            )
 
         with tf.variable_scope('train'):
-            self.train_op = tf.train.AdamOptimizer(self._learning_rate).minimize(self.loss)
+            self.train_op = tf.train.AdamOptimizer(
+                self.config["_learning_rate"]).minimize(self.loss)
 
-        target_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="target_net_" + self._name)
-        eval_params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope="eval_net_" + self._name)
+        target_params = tf.get_collection(
+            tf.GraphKeys.GLOBAL_VARIABLES,
+            scope="target_net_" + self.aid
+        )
+        eval_params = tf.get_collection(
+            tf.GraphKeys.GLOBAL_VARIABLES,
+            scope="eval_net_" + self.aid
+        )
 
         with tf.variable_scope('soft_replacement'):
-            self.update_q_net = [tf.assign(t, e) for t, e in zip(target_params, eval_params)]
+            self.update_q_net = [
+                tf.assign(t, e)
+                for t, e in zip(target_params, eval_params)
+            ]
 
-    def learn(self, global_step):
+    def fit(self):
         # sample batch memory from all memory
-        if self.buffer_count > self.opt["memory_size"]:
-            sample_indices = np.random.choice(self.opt["memory_size"], size=self.opt["batch_size"])
+        if self.buffer_count > self.config["memory_size"]:
+            sample_indices = np.random.choice(
+                self.config["memory_size"],
+                size=self.config["batch_size"]
+            )
         else:
-            sample_indices = np.random.choice(self.buffer_count, size=self.opt["batch_size"])
+            sample_indices = np.random.choice(
+                self.buffer_count,
+                size=self.config["batch_size"]
+            )
 
         batch = self.buffer[sample_indices, :]
-        batch_s = batch[:, :self.opt["state_space"]]
-        batch_a = batch[:, self.opt["state_space"]]
-        batch_r = batch[:, self.opt["state_space"] + 1]
-        batch_s_n = batch[:, -self.opt["state_space"]:]
+        batch_s = batch[:, :self.config["state_space"]]
+        batch_a = batch[:, self.config["state_space"]]
+        batch_r = batch[:, self.config["state_space"] + 1]
+        batch_s_n = batch[:, -self.config["state_space"]:]
 
         _, cost = self.sess.run(
             [self.train_op, self.loss],
@@ -141,10 +186,10 @@ class DqnAgent(base_agent.BaseAgent):
             }
         )
 
-        self.epsilon -= self.opt["epsilon_decay"]
+        self.epsilon -= self.config["epsilon_decay"]
         # self.writer.add_summary(summaries, global_step)
 
-        if not global_step % 100:
+        if not self.step_counter % 100:
             self.update_q()
 
     def save_transition(self, state, action, reward, state_next):
@@ -152,7 +197,7 @@ class DqnAgent(base_agent.BaseAgent):
         Save transition to buffer
         """
         transition = np.hstack((state, [action, reward], state_next))
-        index = self.buffer_count % self.opt["memory_size"]
+        index = self.buffer_count % self.config["memory_size"]
         self.buffer[index, :] = transition
         self.buffer_count += 1
 
@@ -162,15 +207,15 @@ class DqnAgent(base_agent.BaseAgent):
         """
         self.sess.run(self.update_q_net)
 
-    def choose_action(self, state):
+    def predict(self, is_explore, **kwargs):
         """
         Choose an action
         """
-        if not self._learning_mode or random.random() >= self.epsilon:
+        if not is_explore or random.random() >= self.epsilon:
             return np.argmax(self.sess.run(self.action_output,
-                                           feed_dict={self._state: state}))
+                                           feed_dict={self._state: kwargs["state"]}))
         else:
-            return np.random.randint(self.opt["action_space"])
+            return np.random.randint(self.config["action_space"])
 
 
 if __name__ == "__main__":
@@ -193,14 +238,14 @@ if __name__ == "__main__":
     env_conf["replenishment_rate"] = parsed_args.replenishment_rate
     env = environment.GameEnv(env_conf)
 
-    dir_conf, agent_opt = conf["dir_config"], conf["dqn"]
+    dir_conf, agent_config = conf["dir_config"], conf["dqn"]
     dir_conf["model_save_path"] = dir_conf["model_save_path"] + '_' + \
                                   str(env_conf["sustain_weight"]) + '_' + \
                                   str(training_conf["num_agents"]) + '/'
 
     agent_list = []
     for i in range(training_conf["num_agents"]):
-        agt = DqnAgent("DQN_" + str(i), agent_opt)
+        agt = DqnAgent("DQN_" + str(i), agent_config)
         agent_list.append(agt)
 
     # -------------- start train mode --------------
@@ -216,7 +261,7 @@ if __name__ == "__main__":
 
         avg_scores = []
         global_step = 0
-        phi_state = [np.zeros((agent_opt["time_steps"], agent_opt["state_space"])) for _ in
+        phi_state = [np.zeros((agent_config["time_steps"], agent_config["state_space"])) for _ in
                      range(training_conf["num_agents"])]
 
         for agt in agent_list:
@@ -224,7 +269,7 @@ if __name__ == "__main__":
 
         for epoch in range(training_conf["train_epochs"]):
 
-            if agent_list[0].epsilon <= agent_opt["min_epsilon"]:
+            if agent_list[0].epsilon <= agent_config["min_epsilon"]:
                 break
 
             env.reset()
@@ -257,7 +302,7 @@ if __name__ == "__main__":
 
                 for index, player in enumerate(agent_list):
                     phi_curr_state = np.mean(phi_state[index], axis=0)
-                    phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
+                    phi_state[index][global_step % agent_config["time_steps"], :] = np.asarray(next_states[index])
                     phi_next_state = np.mean(phi_state[index], axis=0)
 
                     player.save_transition(phi_curr_state, actions[index], rewards[index], phi_next_state)
@@ -337,7 +382,7 @@ if __name__ == "__main__":
                 avg_assets.append(avg_assets[-1] + next_states[0][3] / training_conf["num_agents"])
 
                 for index, player in enumerate(agent_list):
-                    phi_state[index][global_step % agent_opt["time_steps"], :] = np.asarray(next_states[index])
+                    phi_state[index][global_step % agent_config["time_steps"], :] = np.asarray(next_states[index])
 
                 global_step += 1
 

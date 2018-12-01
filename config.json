@@ -1,108 +1,106 @@
 {
-  "training_config": {
+  "env": {
     "num_trial": 20,
-    "toy_env": "CartPole-v0",
-    "num_agents": 1,
-    "max_round": 300,
-    "test_max_round": 8000,
-    "train_epochs": 10000,
-    "test_epochs": 10,
+    "default_env": "CartPole-v0",
+    "train_round": 300,
+    "test_round": 8000,
+    "epoch": 10000,
     "total_init_effort": 300,
     "total_max_effort": 500,
     "total_min_effort": 100,
-    "min_increment": 10
+    "log_path": "log/"
   },
-  "env_config": {
-    "resource_capacity_n_max": 1000.0,
-    "resource_capacity_init": 1000.0,
+  "game":{
+    "max_resource_capacity": 1000.0,
     "replenishment_rate": 0.5,
     "alpha": 0.35,
     "beta": 0.4,
-    "cost_c": 0.5
+    "cost": 0.5
   },
-  "dir_config": {
-    "log_path": "../log/",
-    "model_save_path": "../log/agent_model/"
-  },
-  "dqn": {
-    "state_space": 4,
-    "time_steps": 8,
-    "action_space": 3,
-    "learning_rate": 0.001,
-    "init_epsilon": 1.0,
-    "min_epsilon": 0.1,
-    "epsilon_decay": 0.0005,
-    "gamma": 0.5,
-    "copy_step": 10,
-    "memory_size": 500,
-    "batch_size": 128,
-    "fully_connected_layer_1_node_num": 64,
-    "fully_connected_layer_2_node_num": 128,
-    "fully_connected_layer_3_node_num": 128,
-    "fully_connected_layer_4_node_num": 64,
-    "in_keep_prob": 0.8,
-    "summary_path": "../log/dqn_graph/"
-  },
-  "drqn": {
-    "max_round": 300,
-    "state_space": 4,
-    "action_space": 3,
-    "learning_rate": 0.001,
-    "init_epsilon": 1.0,
-    "min_epsilon": 0.1,
-    "epsilon_decay": 0.002,
-    "gamma": 0.5,
-    "copy_step": 10,
-    "memory_size": 500,
-    "batch_size": 128,
-    "gru_nodes_nums": [
-        32,
-        32
-     ],
-    "summary_path": "../log/drqn_graph/"
-  },
-  "ddpg": {
-    "time_steps": 4,
-    "action_upper_bound": 500.0,
-    "action_lower_bound": 10.0,
-    "tau": 0.01,
-    "state_space": 4,
-    "action_space": 1,
-    "learning_rate": 0.001,
-    "init_epsilon": 1.0,
-    "min_epsilon": 0.1,
-    "epsilon_decay": 0.001,
-    "gamma": 0.5,
-    "copy_step": 10,
-    "memory_size": 500,
-    "batch_size": 128,
-    "fully_connected_layer_1_node_num": 64,
-    "fully_connected_layer_2_node_num": 128,
-    "fully_connected_layer_3_node_num": 64,
-    "in_keep_prob": 0.8,
-    "summary_path": "../log/pg_graph/"
-  },
-  "rdpg": {
-    "action_upper_bound": 500.0,
-    "tau": 0.01,
-    "state_space": 2,
-    "action_space": 1,
-    "learning_rate": 0.001,
-    "init_epsilon": 1.0,
-    "min_epsilon": 0.1,
-    "epsilon_decay": 0.003,
-    "gamma": 0.5,
-    "copy_step": 10,
-    "memory_size": 500,
-    "batch_size": 128,
-    "gru_nodes_nums": [
-      32,
-      32
-    ],
-    "fully_connected_layer_1_node_num": 32,
-    "fully_connected_layer_2_node_num": 32,
-    "fully_connected_layer_3_node_num": 32,
-    "in_keep_prob": 0.8,
-    "summary_path": "../log/pg_graph/"
+  "model":{
+      "dqn": {
+        "model_name": "dqn", 
+        "state_space": 4,
+        "time_steps": 8,
+        "action_space": 3,
+        "learning_rate": 0.001,
+        "init_epsilon": 1.0,
+        "min_epsilon": 0.1,
+        "epsilon_decay": 0.0005,
+        "gamma": 0.5,
+        "copy_step": 10,
+        "memory_size": 500,
+        "batch_size": 128,
+        "fully_connected_layer_1_node_num": 64,
+        "fully_connected_layer_2_node_num": 128,
+        "fully_connected_layer_3_node_num": 128,
+        "fully_connected_layer_4_node_num": 64,
+        "in_keep_prob": 0.8,
+        "delta_increment": 10
+      },
+      "drqn": {
+        "model_name": "drqn",
+        "max_round": 300,
+        "state_space": 4,
+        "action_space": 3,
+        "learning_rate": 0.001,
+        "init_epsilon": 1.0,
+        "min_epsilon": 0.1,
+        "epsilon_decay": 0.002,
+        "gamma": 0.5,
+        "copy_step": 10,
+        "memory_size": 500,
+        "batch_size": 128,
+        "gru_nodes_nums": [
+            32,
+            32
+         ]
+      },
+      "ddpg": {
+        "model_name": "ddpg", 
+        "time_steps": 4,
+        "action_upper_bound": 500.0,
+        "action_lower_bound": 10.0,
+        "tau": 0.01,
+        "state_space": 4,
+        "action_space": 1,
+        "learning_rate": 0.001,
+        "init_epsilon": 1.0,
+        "min_epsilon": 0.1,
+        "epsilon_decay": 0.001,
+        "gamma": 0.5,
+        "copy_step": 10,
+        "memory_size": 500,
+        "batch_size": 128,
+        "fully_connected_layer_1_node_num": 64,
+        "fully_connected_layer_2_node_num": 128,
+        "fully_connected_layer_3_node_num": 64,
+        "in_keep_prob": 0.8,
+        "summary_path": "../log/pg_graph/"
+      },
+      "rdpg": {
+        "model_name": "rdpg", 
+        "action_upper_bound": 500.0,
+        "tau": 0.01,
+        "state_space": 2,
+        "action_space": 1,
+        "learning_rate": 0.001,
+        "init_epsilon": 1.0,
+        "min_epsilon": 0.1,
+        "epsilon_decay": 0.003,
+        "gamma": 0.5,
+        "copy_step": 10,
+        "memory_size": 500,
+        "batch_size": 128,
+        "gru_nodes_nums": [
+          32,
+          32
+        ],
+        "fully_connected_layer_1_node_num": 32,
+        "fully_connected_layer_2_node_num": 32,
+        "fully_connected_layer_3_node_num": 32,
+        "in_keep_prob": 0.8,
+        "summary_path": "../log/pg_graph/"
+      }
   }
 }
