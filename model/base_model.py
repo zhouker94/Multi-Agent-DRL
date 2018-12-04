@@ -47,12 +47,15 @@ class BaseModel(object):
     @abstractmethod
     def _build_graph(self):
         """
-        Build nn model. All subclass should override this function
+        Build tensorflow nn model.
         """
         pass
 
     @abstractmethod
     def fit(self):
+        """
+        train nn
+        """
         pass
 
     @abstractmethod

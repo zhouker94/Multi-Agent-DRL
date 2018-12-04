@@ -1,5 +1,3 @@
-import numpy as np
-
 import argparse
 import json
 import os
@@ -43,8 +41,16 @@ def main():
         raise NotImplementedError
 
     env_conf = conf["env"]
-    SAVE_MODEL_PATH = os.path.join(env_conf["log_path"], "model",
-                                   "{}_{}".format(W, N_AGENT))
+    SAVE_MODEL_PATH = os.path.join(
+        env_conf["log_path"],
+        "model",
+        "{}_{}".format(W, N_AGENT)
+    )
+    SAVE_RESULT_PATH = os.path.join(
+        env_conf["log_path"],
+        "result",
+        "{}_{}".format(W, N_AGENT)
+    )
 
     # Init game
     game = cpr_game.CPRGame(conf["game"])

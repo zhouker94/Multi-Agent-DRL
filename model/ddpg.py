@@ -12,7 +12,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import json
-import sys
 import os
 
 
@@ -75,9 +74,7 @@ class DDPGModel(base_model.BaseModel):
         self.actor_train_op = tf.train.AdamOptimizer(
             self.config["learning_rate"]).minimize(self.actor_loss,
                                                    var_list=self.params[0])
-
-        self.q_target = self._reward + self.gamma * self.q_next
-
+        self.q_target = self._reward + self.config['gamma'] * self.q_next
         self.critic_loss = tf.losses.mean_squared_error(self.q_target, self.q_predict)
         self.critic_train_op = tf.train.AdamOptimizer(
             self.config["learning_rate"] * 2).minimize(self.critic_loss,
