@@ -15,7 +15,7 @@ class Agent(object):
         self._config = config
         self._learn_mode = learn_mode
         self._save_model_path = save_model_path
-        
+
         if config["model_name"] == "DQN":
             self._model = dqn.DQNModel(aid, config)
         elif config["model_name"] == "DDPG":
@@ -27,7 +27,7 @@ class Agent(object):
     def remember(self, state, action, reward, next_state):
         self._model.save_transition(state, action, reward, next_state)
 
-    def act(self, state, **kwargs):
+    def act(self, state, epsilon=0 **kwargs):
         self._model.predict(state, kwargs)
 
     def save(self):
@@ -39,6 +39,6 @@ class Agent(object):
 
         if not os.path.exists(model_path):
             os.makedirs(model_path)
-        
+
         save_path = self._model.save_model(model_path)
         print("Model saved in path: %s" % save_path)

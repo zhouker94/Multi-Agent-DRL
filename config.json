@@ -19,12 +19,11 @@
   },
   "model":{
       "dqn": {
-        "model_name": "dqn", 
+        "model_name": "dqn",
         "state_space": 4,
         "time_steps": 8,
         "action_space": 3,
         "learning_rate": 0.001,
-        "init_epsilon": 1.0,
         "min_epsilon": 0.1,
         "epsilon_decay": 0.0005,
         "gamma": 0.5,
@@ -44,7 +43,6 @@
         "state_space": 4,
         "action_space": 3,
         "learning_rate": 0.001,
-        "init_epsilon": 1.0,
         "min_epsilon": 0.1,
         "epsilon_decay": 0.002,
         "gamma": 0.5,
@@ -57,7 +55,7 @@
          ]
       },
       "ddpg": {
-        "model_name": "ddpg", 
+        "model_name": "ddpg",
         "time_steps": 4,
         "action_upper_bound": 500.0,
         "action_lower_bound": 10.0,
@@ -65,7 +63,6 @@
         "state_space": 4,
         "action_space": 1,
         "learning_rate": 0.001,
-        "init_epsilon": 1.0,
         "min_epsilon": 0.1,
         "epsilon_decay": 0.001,
         "gamma": 0.5,
@@ -79,13 +76,12 @@
         "summary_path": "../log/pg_graph/"
       },
       "rdpg": {
-        "model_name": "rdpg", 
+        "model_name": "rdpg",
         "action_upper_bound": 500.0,
         "tau": 0.01,
         "state_space": 2,
         "action_space": 1,
         "learning_rate": 0.001,
-        "init_epsilon": 1.0,
         "min_epsilon": 0.1,
         "epsilon_decay": 0.003,
         "gamma": 0.5,
