@@ -27,48 +27,57 @@ class DDPGModel(base_model.BaseModel):
         self.buffer = np.zeros(
             (
                 self.config["memory_size"],
-                self.config["state_space"] * 2 + self.config["action_space"] + 1
+                self.config["state_space"] * 2 + \
+                    self.config["action_space"] + 1
             )
         )
         self.buffer_counter = 0
 
     def _build_graph(self):
         self._phase = tf.placeholder(tf.bool, name='phase')
-        self._reward = tf.placeholder(tf.float32, [None, 1], name='input_reward')
+        self._reward = tf.placeholder(
+            tf.float32,
+            [None, 1],
+            name='input_reward'
+        )
         self.tau = tf.constant(self.config["tau"])
         self.a_predict = self.__build_actor_nn(
             self._state,
-            "predict/actor" + self.aid,
+            "predict/actor" + self.model_id,
             self._phase,
             trainable=True
         )
         self.a_next = self.__build_actor_nn(
             self._next_state,
-            "target/actor" + self.aid,
+            "target/actor" + self.model_id,
             self._phase,
             trainable=False
         )
         self.q_predict = self.__build_critic(
             self._state,
             self.a_predict,
-            "predict/critic" + self.aid,
+            "predict/critic" + self.model_id,
             self._phase,
             trainable=True
         )
         self.q_next = self.__build_critic(
             self._next_state,
             self.a_next,
-            "target/critic" + self.aid,
+            "target/critic" + self.model_id,
             self._phase,
             trainable=False
         )
         self.params = []
 
-        for scope in ['predict/actor' + self.aid,
-                      'target/actor' + self.aid,
-                      'predict/critic' + self.aid,
-                      'target/critic' + self.aid]:
-            self.params.append(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope))
+        for scope in ['predict/actor' + self.model_id,
+                      'target/actor' + self.model_id,
+                      'predict/critic' + self.model_id,
+                      'target/critic' + self.model_id]:
+            self.params.append(
+                tf.get_collection(
+                    tf.GraphKeys.GLOBAL_VARIABLES, scope=scope
+                )
+            )
 
         self.actor_loss = -tf.reduce_mean(self.q_predict)
         self.actor_train_op = tf.train.AdamOptimizer(
@@ -197,16 +206,15 @@ class DDPGModel(base_model.BaseModel):
             self._reward: reward,
             self._next_state: state_next
         })
-        self.epsilon -= self.config["epsilon_decay"]
 
-    def predict(self, state, is_explore, **kwargs):
+    def predict(self, state, epsilon, **kwargs):
         action = self.sess.run(
             self.a_predict,
             feed_dict={
                 self._state: state,
                 self._phase: False}
         )
-        exploration_scale = 1000 * self.epsilon
+        exploration_scale = 1000 * epsilon
         action = np.clip(
             np.random.normal(action[0], exploration_scale),
             0,

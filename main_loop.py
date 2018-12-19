@@ -3,33 +3,15 @@ import json
 import os
 
 import cpr_game
-import agent
+from agent import Agent
+import helper
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model',
-                        choices=["dqn", "ddpg"],
-                        default="dqn",
-                        help='RL algorithm')
-    parser.add_argument('--n_agent',
-                        type=int,
-                        default=1,
-                        help='The number of agents')
-    parser.add_argument('--sustainable_weight',
-                        type=float,
-                        default=0.5,
-                        help='Weight of sustainability')
-    parser.add_argument('--learn_mode',
-                        choices=["train", "test"],
-                        default="train",
-                        help='Train or test mode')
-    parser.add_argument('--v',
-                        type=str,
-                        default="v_00",
-                        help='Current model version')
-    parsed_args = parser.parse_args()
-    conf = json.load(open('config.json', 'r'))
+    parsed_args = helper.build_argument_parser(parser)
+    with open('config.json', 'r') as f:
+        conf = json.load(f)
 
     MODEL_NAME = parsed_args.model
     N_AGENT = parsed_args.n_agent
@@ -37,13 +19,13 @@ def main():
         parsed_args.sustainable_weight
     LEARN_MODE = parsed_args.learn_mode
 
-    if not MODEL_NAME in conf["model"]:
+    if MODEL_NAME not in conf["model"]:
         raise NotImplementedError
 
     env_conf = conf["env"]
     SAVE_MODEL_PATH = os.path.join(
         env_conf["log_path"],
-        "model",
+        MODEL_NAME + "model",
         "{}_{}".format(W, N_AGENT)
     )
     SAVE_RESULT_PATH = os.path.join(
@@ -52,20 +34,71 @@ def main():
         "{}_{}".format(W, N_AGENT)
     )
 
-    # Init game
+    # Init game environment
     game = cpr_game.CPRGame(conf["game"])
     # Init agents
     agent_list = [
-        agent.Agent("agent:{}".format(i),
-                    conf["model"][MODEL_NAME],
-                    LEARN_MODE,
-                    SAVE_MODEL_PATH)
+        Agent(
+            "agent_{}".format(i),
+            conf["model"][MODEL_NAME],
+        )
         for i in range(N_AGENT)
     ]
 
-    global_step = 0
     if LEARN_MODE == "train":
         avg_scores = []
+        epsilon = env_conf["init_epsilon"]
+        state_list = [[0] * env_conf["state_space"]] * N_AGENT
+        next_state_list = [[0] * env_conf["state_space"]] * N_AGENT
+        reward_list = [0] * N_AGENT
+        epoch = 0
+        while epsilon >= env_conf["min_epsilon"]:
+            # Reset Game Environment
+            game.reset()
+            effort_list = [env_conf["total_init_effort"] / N_AGENT] * N_AGENT
+            score = 0.0
+            for _ in range(env_conf["max_train_round"]):
+                for i, agent in enumerate(agent_list):
+
+                    if MODEL_NAME == "DDPG":
+                        action = agent.act(
+                            state_list[i],
+                            epsilon=epsilon,
+                            upper_bound=game.pool / N_AGENT  # only work for DDPG model
+                        )
+                    elif MODEL_NAME == "DQN":
+                        action = agent.act(
+                            state_list[i],
+                            epsilon=epsilon,
+                        )
+
+                    effort_list[i] = action
+                    agent.remember(
+                        state_list[i],
+                        action,
+                        reward_list[i],
+                        next_state_list[i]
+                    )
+                    effort_list[i] = action
+
+                next_state_list, reward_list, done = game.step(effort_list)
+                score += sum(reward_list) / N_AGENT
+                if done:
+                    break
+
+            for agent in agent_list:
+                agent.learn()
+
+            print("epoch: {}, score: {}, e: {:.2}"
+                  .format(epoch, score, epsilon))
+            epsilon -= env_conf["epsilon_decay"]
+            epoch += 1
+            avg_scores.append(score)
+
+        for agent in agent_list:
+            agent.save(SAVE_MODEL_PATH)
+
+        # helper.save_plot(avg_scores, SAVE_RESULT_PATH)
 
     elif LEARN_MODE == "test":
         pass

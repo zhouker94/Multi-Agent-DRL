@@ -3,11 +3,10 @@ from abc import abstractmethod
 
 
 class BaseModel(object):
-    def __init__(self, aid, config):
-        self.aid = aid
+    def __init__(self, model_id, config):
+        self.model_id = model_id
         self.config = config
         self.step_counter = 0
-        self.epsilon = self.config["init_epsilon"]
 
         # input & output
         self._state = tf.placeholder(
@@ -59,7 +58,7 @@ class BaseModel(object):
         pass
 
     @abstractmethod
-    def predict(self, state, is_explore, **kwargs):
+    def predict(self, state, epsilon, **kwargs):
         pass
 
     @abstractmethod
@@ -72,5 +71,5 @@ class BaseModel(object):
         """
         return self.saver.save(self.sess, path)
 
-    def close_model(self):
+    def close(self):
         self.sess.close()

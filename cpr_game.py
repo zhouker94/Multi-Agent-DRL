@@ -8,7 +8,6 @@
 class CPRGame(object):
     def __init__(self, conf):
         self.W = conf["sustainable_weight"]
-        
         self.RG = conf["replenishment_rate"]
         self.MRC = conf["max_resource_capacity"]
         self.ALPHA = conf["alpha"]
@@ -22,7 +21,7 @@ class CPRGame(object):
 
     def harvest(self, x, N):
         return self.BETA * (x ** self.ALPHA) \
-            * (N ** (1 - self.ALPHA))
+               * (N ** (1 - self.ALPHA))
 
     def reward(self, delta_n, pis):
         rewards = []
@@ -39,13 +38,13 @@ class CPRGame(object):
         # Change game status
         X = sum(xs)
         harvest_level = self.harvest(X, self.pool)
-        delta_n = self.growth_func(self.pool) - harvest_level
+        delta_n = self.growth(self.pool) - harvest_level
         self.pool += delta_n
         game_is_done = True if self.pool <= 5.0 else False
-        
+
         # get feedback from env
         pis = [x / float(X) * harvest_level - self.COST * x \
-            for x in xs]
+               for x in xs]
         PI = sum(pis)
 
         # observations

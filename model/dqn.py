@@ -30,7 +30,7 @@ class DQNModel(base_model.BaseModel):
         w_initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
         b_initializer = tf.constant_initializer(0.1)
 
-        with tf.variable_scope('eval_net_' + self.aid):
+        with tf.variable_scope('eval_net_' + self.model_id):
             # batch_norm_state = tf.contrib.layers.batch_norm(self._state)
             with tf.variable_scope('phi_net'):
                 phi_state_layer_1 = tf.layers.dense(
@@ -73,7 +73,7 @@ class DQNModel(base_model.BaseModel):
                 # size of q_value_predict is [BATCH_SIZE, 1]
                 action_indices = tf.stack(
                     [
-                        tf.range(tf.shape(self._action)[0], dtype=tf.int32),
+                        tf.range(tf.shape(self._action)[0]),
                         self._action
                     ],
                     axis=1
