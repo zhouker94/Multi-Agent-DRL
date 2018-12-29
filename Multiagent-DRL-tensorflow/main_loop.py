@@ -18,6 +18,7 @@ def main():
     W = conf["game"]["sustainable_weight"] = \
         parsed_args.sustainable_weight
     LEARN_MODE = parsed_args.learn_mode
+    CURRENT_VERSION = parsed_args.version
 
     if MODEL_NAME not in conf["model"]:
         raise NotImplementedError
@@ -25,12 +26,15 @@ def main():
     env_conf = conf["env"]
     SAVE_MODEL_PATH = os.path.join(
         env_conf["log_path"],
-        MODEL_NAME + "model",
-        "{}_{}".format(W, N_AGENT)
+        "{}_model".format(MODEL_NAME),
+        CURRENT_VERSION,
+        "{}_{}".format(W, N_AGENT),
+        "checkpoints"
     )
     SAVE_RESULT_PATH = os.path.join(
         env_conf["log_path"],
-        "result",
+        "{}_model".format(MODEL_NAME),
+        CURRENT_VERSION,
         "{}_{}".format(W, N_AGENT)
     )
 
@@ -64,7 +68,7 @@ def main():
                         action = agent.act(
                             state_list[i],
                             epsilon=epsilon,
-                            upper_bound=game.pool / N_AGENT  # only work for DDPG model
+                            upper_bound=game.pool / N_AGENT
                         )
                     elif MODEL_NAME == "DQN":
                         action = agent.act(
@@ -98,7 +102,7 @@ def main():
         for agent in agent_list:
             agent.save(SAVE_MODEL_PATH)
 
-        # helper.save_plot(avg_scores, SAVE_RESULT_PATH)
+        helper.save_result(avg_scores, SAVE_RESULT_PATH)
 
     elif LEARN_MODE == "test":
         pass

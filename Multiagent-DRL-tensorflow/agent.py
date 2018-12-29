@@ -62,5 +62,5 @@ class Agent(object):
             os.makedirs(model_path)
 
         save_path = self._model.save_model(model_path)
-        print("Model saved in path: %s" % save_path)
+        print("Model saved in path: {}".format(save_path))
         self._model.close()

@@ -9,7 +9,7 @@
     "total_min_effort": 100,
     "log_path": "log",
     "init_epsilon": 1.0,
-    "epsilon_decay": 0.0005,
+    "epsilon_decay": 0.1,
     "min_epsilon": 0.1,
     "state_space": 4
   },

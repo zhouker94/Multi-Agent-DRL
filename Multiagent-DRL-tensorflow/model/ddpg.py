@@ -27,8 +27,7 @@ class DDPGModel(base_model.BaseModel):
         self.buffer = np.zeros(
             (
                 self.config["memory_size"],
-                self.config["state_space"] * 2 + \
-                    self.config["action_space"] + 1
+                self.config["state_space"] * 2 + self.config["action_space"] + 1
             )
         )
         self.buffer_counter = 0
@@ -81,55 +80,74 @@ class DDPGModel(base_model.BaseModel):
 
         self.actor_loss = -tf.reduce_mean(self.q_predict)
         self.actor_train_op = tf.train.AdamOptimizer(
-            self.config["learning_rate"]).minimize(self.actor_loss,
-                                                   var_list=self.params[0])
+            self.config["learning_rate"]
+        ).minimize(
+            self.actor_loss,
+            var_list=self.params[0]
+        )
+
         self.q_target = self._reward + self.config['gamma'] * self.q_next
-        self.critic_loss = tf.losses.mean_squared_error(self.q_target, self.q_predict)
+        self.critic_loss = tf.losses.mean_squared_error(
+            self.q_target, self.q_predict)
         self.critic_train_op = tf.train.AdamOptimizer(
-            self.config["learning_rate"] * 2).minimize(self.critic_loss,
-                                                       var_list=
-                                                       self.params[2])
+            self.config["learning_rate"] * 2
+        ).minimize(
+            self.critic_loss,
+            var_list=self.params[2]
+        )
 
-        self.update_actor = [tf.assign(t_a, (1 - self.tau) * t_a + self.tau * p_a) for p_a, t_a in zip(self.params[0],
-                                                                                                       self.params[1])]
-
-        self.update_critic = [tf.assign(t_c, (1 - self.tau) * t_c + self.tau * p_c) for p_c, t_c in zip(self.params[2],
-                                                                                                        self.params[3])]
+        self.update_actor = [
+            tf.assign(t_a, (1 - self.tau) * t_a + self.tau * p_a)
+            for p_a, t_a in zip(self.params[0], self.params[1])
+        ]
+        self.update_critic = [
+            tf.assign(t_c, (1 - self.tau) * t_c + self.tau * p_c)
+            for p_c, t_c in zip(self.params[2], self.params[3])
+        ]
 
     def __build_actor_nn(self, state, scope, phase, trainable=True):
-        w_init, b_init = tf.random_normal_initializer(.0, .1), tf.constant_initializer(.1)
+        w_init, b_init = \
+            tf.random_normal_initializer(.0, .1), tf.constant_initializer(.1)
 
         with tf.variable_scope(scope):
             # batch_norm_state = tf.layers.batch_normalization(state, axis=0)
             # batch_norm_state = tf.contrib.layers.batch_norm(state, center=True, scale=True, is_training=phase)
 
-            phi_state_layer_1 = tf.layers.dense(state,
-                                                self.config["fully_connected_layer_1_node_num"],
-                                                tf.nn.relu,
-                                                kernel_initializer=w_init,
-                                                bias_initializer=b_init,
-                                                trainable=trainable)
+            phi_state_layer_1 = tf.layers.dense(
+                state,
+                self.config["fully_connected_layer_1_node_num"],
+                tf.nn.relu,
+                kernel_initializer=w_init,
+                bias_initializer=b_init,
+                trainable=trainable
+            )
 
-            phi_state_layer_2 = tf.layers.dense(phi_state_layer_1,
-                                                self.config["fully_connected_layer_2_node_num"],
-                                                tf.nn.relu,
-                                                kernel_initializer=w_init,
-                                                bias_initializer=b_init,
-                                                trainable=trainable)
+            phi_state_layer_2 = tf.layers.dense(
+                phi_state_layer_1,
+                self.config["fully_connected_layer_2_node_num"],
+                tf.nn.relu,
+                kernel_initializer=w_init,
+                bias_initializer=b_init,
+                trainable=trainable
+            )
 
-            phi_state_layer_3 = tf.layers.dense(phi_state_layer_2,
-                                                self.config["fully_connected_layer_3_node_num"],
-                                                tf.nn.relu,
-                                                kernel_initializer=w_init,
-                                                bias_initializer=b_init,
-                                                trainable=trainable)
+            phi_state_layer_3 = tf.layers.dense(
+                phi_state_layer_2,
+                self.config["fully_connected_layer_3_node_num"],
+                tf.nn.relu,
+                kernel_initializer=w_init,
+                bias_initializer=b_init,
+                trainable=trainable
+            )
 
-            action_prob = tf.layers.dense(phi_state_layer_3,
-                                          self.config["action_space"],
-                                          tf.nn.sigmoid,
-                                          kernel_initializer=w_init,
-                                          bias_initializer=b_init,
-                                          trainable=trainable)
+            action_prob = tf.layers.dense(
+                phi_state_layer_3,
+                self.config["action_space"],
+                tf.nn.sigmoid,
+                kernel_initializer=w_init,
+                bias_initializer=b_init,
+                trainable=trainable
+            )
 
             return tf.multiply(action_prob, self.config["action_upper_bound"])
 
@@ -180,10 +198,15 @@ class DDPGModel(base_model.BaseModel):
         self.buffer_counter += 1
 
     def get_sample_batch(self):
-        indices = np.random.choice(self.config["memory_size"], size=self.config["batch_size"])
+        indices = np.random.choice(
+            self.config["memory_size"],
+            size=self.config["batch_size"]
+        )
         batch = self.buffer[indices, :]
         state = batch[:, :self.config["state_space"]]
-        action = batch[:, self.config["state_space"]: self.config["state_space"] + self.config["action_space"]]
+        action = batch[
+                 :, self.config["state_space"]: self.config["state_space"] + self.config["action_space"]
+                 ]
         reward = batch[:, -self.config["state_space"] - 1: -self.config["state_space"]]
         state_next = batch[:, -self.config["state_space"]:]
         return state, action, reward, state_next
@@ -223,6 +246,7 @@ class DDPGModel(base_model.BaseModel):
         return action[0]
 
 
+'''
 if __name__ == "__main__":
 
     # -------------- parameters initialize --------------
@@ -394,3 +418,4 @@ if __name__ == "__main__":
         with open(RESULT_PATH + "test_resource_level.txt", "w+") as f:
             for r in resource_level:
                 f.write(str(r) + '\n')
+'''

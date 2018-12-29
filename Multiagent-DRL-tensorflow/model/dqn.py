@@ -22,7 +22,6 @@ class DQNModel(base_model.BaseModel):
             (self.config["memory_size"],
              self.config["state_space"] + 1 + 1 + self.config["state_space"])
         )
-        self.epsilon = self.config["init_epsilon"]
         self.buffer_count = 0
 
     def _build_graph(self):
@@ -207,13 +206,18 @@ class DQNModel(base_model.BaseModel):
         """
         self.sess.run(self.update_q_net)
 
-    def predict(self, is_explore, **kwargs):
+    def predict(self, epsilon, **kwargs):
         """
         Choose an action
         """
-        if not is_explore or random.random() >= self.epsilon:
-            return np.argmax(self.sess.run(self.action_output,
-                                           feed_dict={self._state: kwargs["state"]}))
+        if random.random() >= epsilon:
+            action = np.argmax(
+                self.sess.run(
+                    self.action_output,
+                    feed_dict={self._state: kwargs["state"]}
+                )
+            )
+            return action
         else:
             return np.random.randint(self.config["action_space"])
 

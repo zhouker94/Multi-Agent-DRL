@@ -19,14 +19,17 @@ def build_argument_parser(parser):
                         choices=["train", "test"],
                         default="train",
                         help='Train or test mode')
-    parser.add_argument('--v',
+    parser.add_argument('--version',
                         type=str,
                         default="v_00",
                         help='Current model version')
     return parser.parse_args()
 
 
-def save_plot(avg_scores, save_path):
+def save_result(avg_scores, save_path):
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
     plt.switch_backend('agg')
     plt.plot(avg_scores)
     plt.interactive(False)
@@ -37,3 +40,5 @@ def save_plot(avg_scores, save_path):
     with open(os.path.join(save_path, 'train_avg_score.txt'), "w+") as f:
         for r in avg_scores:
             f.write(str(r) + '\n')
+
+    print("Results saved in path: {}".format(save_path))
