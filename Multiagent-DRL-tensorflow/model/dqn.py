@@ -25,6 +25,8 @@ class DQNModel(base_model.BaseModel):
         self.buffer_count = 0
 
     def _build_graph(self):
+        self._action = tf.placeholder(tf.int32, [None, ], name='input_action')
+        self._reward = tf.placeholder(tf.float32, [None, ], name='input_reward')
         # w, b initializer
         w_initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
         b_initializer = tf.constant_initializer(0.1)
@@ -72,15 +74,18 @@ class DQNModel(base_model.BaseModel):
                 # size of q_value_predict is [BATCH_SIZE, 1]
                 action_indices = tf.stack(
                     [
-                        tf.range(tf.shape(self._action)[0]),
+                        tf.range(tf.shape(self._action)[0], dtype=tf.int32),
                         self._action
                     ],
                     axis=1
                 )
-                self.q_value_predict = tf.gather_nd(self.q_values_predict, action_indices)
+                self.q_value_predict = tf.gather_nd(
+                    self.q_values_predict,
+                    action_indices
+                )
                 self.action_output = tf.argmax(self.q_values_predict)
 
-        with tf.variable_scope('target_net_' + self.aid):
+        with tf.variable_scope('target_net_' + self.model_id):
             # batch_norm_next_state = tf.contrib.layers.batch_norm(self._next_state)
 
             with tf.variable_scope('phi_net'):
@@ -139,15 +144,15 @@ class DQNModel(base_model.BaseModel):
 
         with tf.variable_scope('train'):
             self.train_op = tf.train.AdamOptimizer(
-                self.config["_learning_rate"]).minimize(self.loss)
+                self.config["learning_rate"]).minimize(self.loss)
 
         target_params = tf.get_collection(
             tf.GraphKeys.GLOBAL_VARIABLES,
-            scope="target_net_" + self.aid
+            scope="target_net_" + self.model_id
         )
         eval_params = tf.get_collection(
             tf.GraphKeys.GLOBAL_VARIABLES,
-            scope="eval_net_" + self.aid
+            scope="eval_net_" + self.model_id
         )
 
         with tf.variable_scope('soft_replacement'):
@@ -185,7 +190,6 @@ class DQNModel(base_model.BaseModel):
             }
         )
 
-        self.epsilon -= self.config["epsilon_decay"]
         # self.writer.add_summary(summaries, global_step)
 
         if not self.step_counter % 100:
@@ -206,20 +210,26 @@ class DQNModel(base_model.BaseModel):
         """
         self.sess.run(self.update_q_net)
 
-    def predict(self, epsilon, **kwargs):
+    def predict(self, state, epsilon, **kwargs):
         """
         Choose an action
         """
         if random.random() >= epsilon:
-            action = np.argmax(
+            action_idx = np.argmax(
                 self.sess.run(
                     self.action_output,
-                    feed_dict={self._state: kwargs["state"]}
+                    feed_dict={self._state: state}
                 )
             )
-            return action
         else:
-            return np.random.randint(self.config["action_space"])
+            action_idx = np.random.randint(self.config["action_space"])
+
+        action = kwargs["pre_action"]
+        if action_idx == 0:
+            action += self.config["delta_increment"]
+        elif action_idx == 1:
+            action -= self.config["delta_increment"]
+        return action
 
 
 if __name__ == "__main__":

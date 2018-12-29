@@ -25,6 +25,7 @@
         "model_name": "DQN",
         "state_space": 4,
         "time_steps": 8,
+        "action_lower_bound": 10.0,
         "action_space": 3,
         "learning_rate": 0.001,
         "gamma": 0.5,

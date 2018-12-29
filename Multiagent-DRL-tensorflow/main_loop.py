@@ -71,6 +71,7 @@ def main():
                         action = agent.act(
                             state_list[i],
                             epsilon=epsilon,
+                            pre_action=effort_list[i]
                         )
 
                     effort_list[i] = action

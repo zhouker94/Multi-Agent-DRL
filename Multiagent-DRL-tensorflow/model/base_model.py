@@ -19,16 +19,6 @@ class BaseModel(object):
             shape=[None, self.config["state_space"]],
             name='next_state'
         )
-        self._reward = tf.placeholder(
-            tf.float32,
-            shape=[None, 1],
-            name='reward'
-        )
-        self._action = tf.placeholder(
-            tf.float32,
-            [None, 1],
-            name='action'
-        )
         self._dropout_keep_prob = tf.placeholder(
             dtype=tf.float32,
             shape=[],

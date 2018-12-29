@@ -33,6 +33,16 @@ class DDPGModel(base_model.BaseModel):
         self.buffer_counter = 0
 
     def _build_graph(self):
+        self._reward = tf.placeholder(
+            tf.float32,
+            shape=[None, 1],
+            name='reward'
+        )
+        self._action = tf.placeholder(
+            tf.float32,
+            [None, self.config["action_space"]],
+            name='action'
+        )
         self._phase = tf.placeholder(tf.bool, name='phase')
         self._reward = tf.placeholder(
             tf.float32,
