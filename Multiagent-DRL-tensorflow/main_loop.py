@@ -24,18 +24,15 @@ def main():
         raise NotImplementedError
 
     env_conf = conf["env"]
-    SAVE_MODEL_PATH = os.path.join(
-        env_conf["log_path"],
-        "{}_model".format(MODEL_NAME),
-        CURRENT_VERSION,
-        "{}_{}".format(W, N_AGENT),
-        "checkpoints"
-    )
     SAVE_RESULT_PATH = os.path.join(
         env_conf["log_path"],
         "{}_model".format(MODEL_NAME),
         CURRENT_VERSION,
         "{}_{}".format(W, N_AGENT)
+    )
+    SAVE_MODEL_PATH = os.path.join(
+        SAVE_RESULT_PATH,
+        "checkpoints"
     )
 
     # Init game environment
