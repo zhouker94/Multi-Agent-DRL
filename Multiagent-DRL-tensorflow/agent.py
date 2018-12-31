@@ -11,7 +11,7 @@ import numpy as np
 
 
 class Agent(object):
-    def __init__(self, aid, config):
+    def __init__(self, aid, config, ckpt_path=None):
         self._aid = aid
         self._config = config
         self._obs = np.zeros(
@@ -19,10 +19,12 @@ class Agent(object):
         )
         self._step_counter = 0
 
-        if config["model_name"] == "DQN":
-            self._model = dqn.DQNModel(aid, config)
-        elif config["model_name"] == "DDPG":
-            self._model = ddpg.DDPGModel(aid, config)
+        if self._config["model_name"] == "DQN":
+            self._model = dqn.DQNModel(
+                self._aid, self._config, ckpt_path)
+        elif self._config["model_name"] == "DDPG":
+            self._model = ddpg.DDPGModel(
+                self._aid, self._config, ckpt_path)
 
     def learn(self):
         self._model.fit()
@@ -49,18 +51,20 @@ class Agent(object):
 
         return action
 
-    def save(self, save_model_path):
+    def close(self, save_model_path=None):
         """
         Save Tensorflow model
         """
-        model_path = os.path.join(
-            save_model_path,
-            self._aid
-        )
+        if save_model_path:
+            model_path = os.path.join(
+                save_model_path,
+                self._aid
+            )
 
-        if not os.path.exists(model_path):
-            os.makedirs(model_path)
+            if not os.path.exists(model_path):
+                os.makedirs(model_path)
 
-        save_path = self._model.save_model(model_path)
-        print("Model saved in path: {}".format(save_path))
+            save_path = self._model.save_model(model_path)
+            print("Model saved in path: {}".format(save_path))
+
         self._model.close()

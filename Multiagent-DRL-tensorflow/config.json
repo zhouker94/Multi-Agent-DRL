@@ -71,7 +71,6 @@
         "fully_connected_layer_2_node_num": 128,
         "fully_connected_layer_3_node_num": 64,
         "in_keep_prob": 0.8,
-        "summary_path": "../log/pg_graph/"
       },
       "rdpg": {
         "model_name": "rdpg",

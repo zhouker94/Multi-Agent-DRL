@@ -3,7 +3,7 @@ from abc import abstractmethod
 
 
 class BaseModel(object):
-    def __init__(self, model_id, config):
+    def __init__(self, model_id, config, ckpt_path):
         self.model_id = model_id
         self.config = config
         self.step_counter = 0
@@ -28,10 +28,17 @@ class BaseModel(object):
         self._build_graph()
         self.merged = tf.summary.merge_all()
         self.saver = tf.train.Saver()
-
-        self.init = tf.global_variables_initializer()
         self.sess = tf.Session()
-        self.sess.run(self.init)
+
+        if ckpt_path:
+            ckpt = tf.train.get_checkpoint_state(ckpt_path)
+            if ckpt and ckpt.model_checkpoint_path:
+                self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+            else:
+                print("Cannot restore model, does not exist")
+                raise Exception
+        else:
+            self.sess.run(tf.global_variables_initializer())
 
     @abstractmethod
     def _build_graph(self):

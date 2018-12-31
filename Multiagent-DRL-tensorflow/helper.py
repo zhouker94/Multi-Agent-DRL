@@ -1,15 +1,14 @@
 import os
-import matplotlib.pyplot as plt
 
 
 def build_argument_parser(parser):
     parser.add_argument('--model',
                         choices=["DQN", "DDPG"],
-                        default="DDPG",
+                        default="DQN",
                         help='RL algorithm')
     parser.add_argument('--n_agent',
                         type=int,
-                        default=1,
+                        default=5,
                         help='The number of agents')
     parser.add_argument('--sustainable_weight',
                         type=float,
@@ -26,19 +25,13 @@ def build_argument_parser(parser):
     return parser.parse_args()
 
 
-def save_result(avg_scores, save_path):
+def save_result(result_dict, save_path):
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
-    plt.switch_backend('agg')
-    plt.plot(avg_scores)
-    plt.interactive(False)
-    plt.xlabel('Epoch')
-    plt.ylabel('Avg score')
-    plt.savefig(os.path.join(save_path, 'training_plot'))
-
-    with open(os.path.join(save_path, 'train_avg_score.txt'), "w+") as f:
-        for r in avg_scores:
-            f.write(str(r) + '\n')
+    for r in result_dict:
+        with open(os.path.join(save_path, r), "w+") as f:
+            for i in result_dict[r]:
+                f.write(str(i) + '\n')
 
     print("Results saved in path: {}".format(save_path))

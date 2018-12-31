@@ -37,21 +37,23 @@ def main():
 
     # Init game environment
     game = cpr_game.CPRGame(conf["game"])
-    # Init agents
-    agent_list = [
-        Agent(
-            "agent_{}".format(i),
-            conf["model"][MODEL_NAME],
-        )
-        for i in range(N_AGENT)
-    ]
+    state_list = [[0] * env_conf["state_space"]] * N_AGENT
+    next_state_list = [[0] * env_conf["state_space"]] * N_AGENT
+    reward_list = [0] * N_AGENT
+    # -------------- train mode --------------
 
     if LEARN_MODE == "train":
+        # Init agents
+        agent_list = [
+            Agent(
+                "agent_{}".format(i),
+                conf["model"][MODEL_NAME],
+            )
+            for i in range(N_AGENT)
+        ]
+
         avg_scores = []
         epsilon = env_conf["init_epsilon"]
-        state_list = [[0] * env_conf["state_space"]] * N_AGENT
-        next_state_list = [[0] * env_conf["state_space"]] * N_AGENT
-        reward_list = [0] * N_AGENT
         epoch = 0
         while epsilon >= env_conf["min_epsilon"]:
             # Reset Game Environment
@@ -98,12 +100,73 @@ def main():
             avg_scores.append(score)
 
         for agent in agent_list:
-            agent.save(SAVE_MODEL_PATH)
+            agent.close(SAVE_MODEL_PATH)
 
-        helper.save_result(avg_scores, SAVE_RESULT_PATH)
+        helper.save_result(
+            {"train_avg_score.txt": avg_scores},
+            SAVE_RESULT_PATH
+        )
+
+    # -------------- test mode --------------
 
     elif LEARN_MODE == "test":
-        pass
+        # Init agents
+        agent_list = [
+            Agent(
+                "agent_{}".format(i),
+                conf["model"][MODEL_NAME],
+                SAVE_MODEL_PATH
+            )
+            for i in range(N_AGENT)
+        ]
+
+        avg_asset_seq = [0]
+        pool_level_seq = []
+        avg_score_seq = []
+
+        for t in range(env_conf["max_test_round"]):
+            pool_level_seq.append(game.pool)
+            effort_list = [env_conf["total_init_effort"] / N_AGENT] * N_AGENT
+            for i, agent in enumerate(agent_list):
+                if MODEL_NAME == "DDPG":
+                    action = agent.act(
+                        state_list[i],
+                        upper_bound=game.pool / N_AGENT
+                    )
+                elif MODEL_NAME == "DQN":
+                    action = agent.act(
+                        state_list[i],
+                        pre_action=effort_list[i]
+                    )
+
+                effort_list[i] = action
+                agent.remember(
+                    state_list[i],
+                    action,
+                    reward_list[i],
+                    next_state_list[i]
+                )
+                effort_list[i] = action
+
+            next_state_list, reward_list, done = game.step(effort_list)
+
+            avg_score_seq.append(sum(reward_list) / N_AGENT)
+            avg_asset_seq.append(avg_asset_seq[-1] + next_state_list[0][3] / N_AGENT)
+
+            if done:
+                break
+
+        for agent in agent_list:
+            agent.close()
+
+        helper.save_result(
+            {
+                "test_avg_score.txt": avg_asset_seq,
+                "test_assets.txt": avg_asset_seq,
+                "test_resource_level.txt": pool_level_seq
+            },
+            SAVE_RESULT_PATH
+        )
 
 
 if __name__ == "__main__":
