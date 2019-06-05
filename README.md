@@ -9,7 +9,7 @@ Natural renewable resources, such as groundwater, fisheries and forest resources
 
 ## Prerequisite
 
-The demo is dockerized. So all you need is ![docker](https://www.docker.com/).
+The demo is dockerized. So all you need is [docker](https://www.docker.com/).
 
 ## Run the demo
 ```
