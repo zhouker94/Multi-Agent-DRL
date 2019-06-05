@@ -121,46 +121,42 @@ class DDPGModel(base_model.BaseModel):
             tf.random_normal_initializer(.0, .1), tf.constant_initializer(.1)
 
         with tf.variable_scope(scope):
-            '''
-            batch_norm_state = tf.layers.batch_normalization(state, axis=0)
-            batch_norm_state = tf.contrib.layers.batch_norm(
-                state, center=True, scale=True, is_training=phase)
-            '''
-            phi_state_layer_1 = tf.layers.dense(
-                state,
+
+            # batch_norm_state = tf.layers.batch_normalization(state, axis=0)
+            # batch_norm_state = tf.contrib.layers.batch_norm(
+            #     state, center=True, scale=True, is_training=phase)
+
+            phi_state_layer_1 = tf.keras.layers.Dense(
                 self.config["fully_connected_layer_1_node_num"],
-                tf.nn.relu,
+                activation=tf.nn.relu,
                 kernel_initializer=w_init,
                 bias_initializer=b_init,
                 trainable=trainable
-            )
+            )(state)
 
-            phi_state_layer_2 = tf.layers.dense(
-                phi_state_layer_1,
+            phi_state_layer_2 = tf.keras.layers.Dense(
                 self.config["fully_connected_layer_2_node_num"],
-                tf.nn.relu,
+                activation=tf.nn.relu,
                 kernel_initializer=w_init,
                 bias_initializer=b_init,
                 trainable=trainable
-            )
+            )(phi_state_layer_1)
 
-            phi_state_layer_3 = tf.layers.dense(
-                phi_state_layer_2,
+            phi_state_layer_3 = tf.keras.layers.Dense(
                 self.config["fully_connected_layer_3_node_num"],
-                tf.nn.relu,
+                activation=tf.nn.relu,
                 kernel_initializer=w_init,
                 bias_initializer=b_init,
                 trainable=trainable
-            )
+            )(phi_state_layer_2)
 
-            action_prob = tf.layers.dense(
-                phi_state_layer_3,
+            action_prob = tf.keras.layers.Dense(
                 self.config["action_space"],
-                tf.nn.sigmoid,
+                activation=tf.nn.sigmoid,
                 kernel_initializer=w_init,
                 bias_initializer=b_init,
                 trainable=trainable
-            )
+            )(phi_state_layer_3)
 
             return tf.multiply(
                 action_prob, self.config["action_upper_bound"]
@@ -171,43 +167,38 @@ class DDPGModel(base_model.BaseModel):
         w_init = tf.random_normal_initializer(.0, .1)
         b_init = tf.constant_initializer(.1)
         with tf.variable_scope(scope):
-            '''
-            batch_norm_state = tf.contrib.layers.batch_norm(
-                state, center=True, scale=True, is_training=phase,
-                trainable=trainable)
-            '''
-            phi_state = tf.layers.dense(
-                state,
+            # batch_norm_state = tf.contrib.layers.batch_norm(
+            #     state, center=True, scale=True, is_training=phase,
+            #     trainable=trainable)
+            phi_state = tf.keras.layers.Dense(
                 32,
                 kernel_initializer=w_init,
                 bias_initializer=b_init,
                 trainable=trainable
-            )
-            '''
-            batch_norm_action = tf.contrib.layers.batch_norm(
-                action, center=True, scale=True, is_training=phase,
-                trainable=trainable)
-            '''
-            phi_action = tf.layers.dense(
-                action,
+            )(state)
+            # batch_norm_action = tf.contrib.layers.batch_norm(
+            #     action, center=True, scale=True, is_training=phase,
+            #     trainable=trainable)
+            phi_action = tf.keras.layers.Dense(
                 32,
                 kernel_initializer=w_init,
                 bias_initializer=b_init,
-                trainable=trainable)
+                trainable=trainable
+            )(action)
 
-            phi_state_action = tf.layers.dense(
-                tf.nn.relu(phi_state + phi_action),
+            phi_state_action = tf.keras.layers.Dense(
                 32,
                 kernel_initializer=w_init,
                 bias_initializer=b_init,
-                trainable=trainable)
+                trainable=trainable
+            )(tf.nn.relu(phi_state + phi_action))
 
-            q_value = tf.layers.dense(
-                phi_state_action,
+            q_value = tf.keras.layers.Dense(
                 1,
                 kernel_initializer=w_init,
                 bias_initializer=b_init,
-                trainable=trainable)
+                trainable=trainable
+            )(phi_state_action)
 
             return q_value
 
