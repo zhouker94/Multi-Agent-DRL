@@ -27,7 +27,8 @@ class DDPGModel(base_model.BaseModel):
         self.buffer = np.zeros(
             (
                 self.config["memory_size"],
-                self.config["state_space"] * 2 + self.config["action_space"] + 1
+                self.config["state_space"] * 2 +
+                self.config["action_space"] + 1
             )
         )
         self.buffer_counter = 0
@@ -225,9 +226,11 @@ class DDPGModel(base_model.BaseModel):
         state = batch[:, :self.config["state_space"]]
         action = batch[
             :,
-            self.config["state_space"]: self.config["state_space"] + self.config["action_space"]
+            self.config["state_space"]: self.config["state_space"] +
+            self.config["action_space"]
         ]
-        reward = batch[:, -self.config["state_space"] - 1: -self.config["state_space"]]
+        reward = batch[:, -self.config["state_space"] -
+                       1: -self.config["state_space"]]
         state_next = batch[:, -self.config["state_space"]:]
         return state, action, reward, state_next
 
