@@ -1,0 +1,13 @@
+./venv/
+.idea/*
+.vscode/*
+*.pyc
+.DS_Store
+og/*
+venv3/*
+**/.pytest_cache
+**/.mypy_cache
+**/__pycache__
+venv
+venv3.5.2
+*.iml
