@@ -1,6 +1,9 @@
 # Multi-agent DRL
 Deep Reinforcement Learning in multi-agent Common Pool Resource game (CPRg), implemented using Tensorflow.
 
+Accepted and published on IEEE CEC 2019.
+![Paper link](https://ieeexplore.ieee.org/abstract/document/8790001/)
+
 ## Introduction
 
 Natural renewable resources, such as groundwater, fisheries and forest resources, are depleted in a high speed world widely. These resources are called common-pool resources (CPRs). This means that any agent can access them without one another excluded.
