@@ -5,7 +5,7 @@ Deep Reinforcement Learning in multi-agent Common Pool Resource game (CPRg), imp
 
 Natural renewable resources, such as groundwater, fisheries and forest resources, are depleted in a high speed world widely. These resources are called common-pool resources (CPRs). This means that any agent can access them without one another excluded.
 
-![](CRPg.jpg)
+![](./res/CRPg.jpg)
 
 ## Prerequisite
 
@@ -25,14 +25,14 @@ You can choose between the following models:
 
 ## Interaction  framework
 
-![interaction](Multi-agent-interaction.png)
+![interaction](./res/Multi-agent-interaction.png)
 
 ## DQN Architecture
 
-![dqn_nn](MultiDQN-models.png)
+![dqn_nn](./res/MultiDQN-models.png)
 
 ## DDPG Architecture
-![ddpg_nn](MultiDDPG-models.png)
+![ddpg_nn](./res/MultiDDPG-models.png)
 
 ## Reference
 
