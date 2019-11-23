@@ -17,7 +17,7 @@ The demo is dockerized. So all you need is [docker](https://www.docker.com/).
 
 ## Run the demo
 ```
-./run [MODEL] [N AGENT] [SUSTAINABLE WEIGHT] [LEARN MODE] [VERSION]
+./run_demo [MODEL] [N AGENT] [SUSTAINABLE WEIGHT] [LEARN MODE] [VERSION]
 ```
 
 ## Models
