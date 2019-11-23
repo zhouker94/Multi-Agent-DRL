@@ -1,8 +1,12 @@
+"""Main loop module"""
+
 import argparse
 import json
 import os
 
-import cpr_game
+import numpy as np
+
+from cpr_game import CPRGame
 from agent import Agent
 import helper
 
@@ -36,10 +40,12 @@ def main():
     )
 
     # Init game environment
-    game = cpr_game.CPRGame(conf["game"])
-    state_list = [[0] * env_conf["state_space"]] * N_AGENT
-    next_state_list = [[0] * env_conf["state_space"]] * N_AGENT
+    game = CPRGame(conf["game"])
+    states = np.zeros((N_AGENT, env_conf["state_space"]))
+    next_states = np.zeros((N_AGENT, env_conf["state_space"]))
+
     reward_list = [0] * N_AGENT
+
     # -------------- train mode --------------
 
     if LEARN_MODE == "train":
@@ -65,27 +71,27 @@ def main():
 
                     if MODEL_NAME == "DDPG":
                         action = agent.act(
-                            state_list[i],
+                            states[i],
                             epsilon=epsilon,
                             upper_bound=game.pool / N_AGENT
                         )
                     elif MODEL_NAME == "DQN":
                         action = agent.act(
-                            state_list[i],
+                            states[i],
                             epsilon=epsilon,
                             pre_action=effort_list[i]
                         )
 
                     effort_list[i] = action
                     agent.remember(
-                        state_list[i],
+                        states[i],
                         action,
                         reward_list[i],
-                        next_state_list[i]
+                        next_states[i]
                     )
                     effort_list[i] = action
 
-                next_state_list, reward_list, done = game.step(effort_list)
+                next_states, reward_list, done = game.step(effort_list)
                 score += sum(reward_list) / N_AGENT
                 if done:
                     break
@@ -130,28 +136,29 @@ def main():
             for i, agent in enumerate(agent_list):
                 if MODEL_NAME == "DDPG":
                     action = agent.act(
-                        state_list[i],
+                        states[i],
                         upper_bound=game.pool / N_AGENT
                     )
                 elif MODEL_NAME == "DQN":
                     action = agent.act(
-                        state_list[i],
+                        states[i],
                         pre_action=effort_list[i]
                     )
 
                 effort_list[i] = action
                 agent.remember(
-                    state_list[i],
+                    states[i],
                     action,
                     reward_list[i],
-                    next_state_list[i]
+                    next_states[i]
                 )
                 effort_list[i] = action
 
-            next_state_list, reward_list, done = game.step(effort_list)
+            next_states, reward_list, done = game.step(effort_list)
 
             avg_score_seq.append(sum(reward_list) / N_AGENT)
-            avg_asset_seq.append(avg_asset_seq[-1] + next_state_list[0][3] / N_AGENT)
+            avg_asset_seq.append(
+                avg_asset_seq[-1] + next_states[0][3] / N_AGENT)
 
             if done:
                 break

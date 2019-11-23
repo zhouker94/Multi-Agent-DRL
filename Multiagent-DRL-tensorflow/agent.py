@@ -6,11 +6,13 @@
 
 
 import os
-from model import ddpg, dqn
+
 import numpy as np
 
+from model import ddpg, dqn
 
-class Agent(object):
+
+class Agent:
     def __init__(self, aid, config, ckpt_path=None):
         self._aid = aid
         self._config = config
@@ -33,8 +35,7 @@ class Agent(object):
         self._model.save_transition(state, action, reward, next_state)
 
     def act(self, state, epsilon=0, **kwargs):
-        self._obs[self._step_counter % self._config["time_steps"], :] = \
-            np.asarray(state)
+        self._obs[self._step_counter % self._config["time_steps"], :] = state
         self._step_counter += 1
 
         action = self._model.predict(
