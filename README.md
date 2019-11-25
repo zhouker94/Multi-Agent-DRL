@@ -1,13 +1,12 @@
-# Multi-agent DRL
-Deep Reinforcement Learning in multi-agent Common Pool Resource game (CPRg), implemented using Tensorflow.
+# Deep Multi-agent Reinforcement Learning in a Common-Pool Resource System
 
-Accepted and published on *IEEE CEC 2019*.
-
-[Paper link](https://ieeexplore.ieee.org/abstract/document/8790001/)
+The experiment source code in the paper [Deep Multi-agent Reinforcement Learning in a Common-Pool Resource System](https://ieeexplore.ieee.org/abstract/document/8790001/). The paper is accepted and published on *IEEE CEC 2019*.
 
 ## Introduction
 
-Natural renewable resources, such as groundwater, fisheries and forest resources, are depleted in a high speed world widely. These resources are called common-pool resources (CPRs). This means that any agent can access them without one another excluded.
+In complex social-ecological systems, multiple agents with diverse objectives take actions that affect the long-term dynamics of the system. Common pool resources are a subset of such systems, where property rights are typically poorly defined and dynamics are unknown a priori, creating a social dilemma reflected by the well-known **tragedy of the commons**. In this paper, we investigated the efficacy of deep reinforcement learning in a multi-agent setting of a common pool resource system. We used an abstract mathematical model of the system, represented as a partially-observable general-sum Markov game. In the first set of experiments, the independent agents used a deep Q-Network with discrete action spaces to guide decision-making. However, significant shortcomings were evident. Consequently, in a second set of experiments, a Deep Deterministic Policy Gradient learning model with continuous state and action spaces guided agent learning. Simulation results show that agents performed significantly better in terms of both sustainability and economic goals when using the second deep learning model. Despite the fact that agents do not have perfect foresight nor understanding of the implications of their "harvesting" efforts, deep reinforcement learning can be used effectively to "learn in the commons".
+
+A demonstration of CPR system [(Hauser, Oliver P., et al.)](Cooperating with the future):
 
 ![](./res/CRPg.jpg)
 
@@ -23,9 +22,9 @@ The demo is dockerized. So all you need is [docker](https://www.docker.com/).
 ## Models
 You can choose between the following models:
 
-- `DQN`:  Deep Q-network
+- `DQN`:  [Deep Q-network](http://www.davidqiu.com:8888/research/nature14236.pdf)
 
-- `DDPG`: Deep Deterministic Policy Gradient
+- `DDPG`: [Deep Deterministic Policy Gradient](https://arxiv.org/abs/1509.02971)
 
 ## Interaction  framework
 
