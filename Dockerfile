@@ -9,6 +9,6 @@ COPY requirements.txt .
 RUN find . | grep -E "(__pycache__|\.pyc$)" | xargs rm -rf &&\
     pip install --no-cache -r requirements.txt
 
-COPY Multiagent-DRL-tensorflow /Multiagent-DRL-tensorflow
+COPY src /src
 
-WORKDIR /Multiagent-DRL-tensorflow
+WORKDIR /src
