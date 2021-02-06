@@ -43,14 +43,13 @@ def main():
     game = CPRGame(conf["game"])
     states = np.zeros((N_AGENT, env_conf["state_space"]))
     next_states = np.zeros((N_AGENT, env_conf["state_space"]))
-
-    reward_list = [0] * N_AGENT
+    rewards = np.zeros(N_AGENT)
 
     # -------------- train mode --------------
 
     if LEARN_MODE == "train":
         # Init agents
-        agent_list = [
+        agents = [
             Agent(
                 "agent_{}".format(i),
                 conf["model"][MODEL_NAME],
@@ -64,10 +63,10 @@ def main():
         while epsilon >= env_conf["min_epsilon"]:
             # Reset Game Environment
             game.reset()
-            effort_list = [env_conf["total_init_effort"] / N_AGENT] * N_AGENT
+            efforts = np.array([env_conf["total_init_effort"] / N_AGENT] * N_AGENT)
             score = 0.0
             for _ in range(env_conf["max_train_round"]):
-                for i, agent in enumerate(agent_list):
+                for i, agent in enumerate(agents):
 
                     if MODEL_NAME == "DDPG":
                         action = agent.act(
@@ -82,22 +81,20 @@ def main():
                             pre_action=effort_list[i]
                         )
 
-                    effort_list[i] = action
+                    efforts[i] = action
                     agent.remember(
                         states[i],
                         action,
-                        reward_list[i],
+                        rewards[i],
                         next_states[i]
                     )
-                    effort_list[i] = action
 
-                next_states, reward_list, done = game.step(effort_list)
-                score += sum(reward_list) / N_AGENT
+                next_states, rewards, done = game.step(efforts)
+                score += sum(rewards) / N_AGENT
                 if done:
                     break
 
-            for agent in agent_list:
-                agent.learn()
+            [agent.learn() for agent in agents]
 
             print("epoch: {}, score: {}, e: {:.2}"
                   .format(epoch, score, epsilon))
@@ -105,9 +102,7 @@ def main():
             epoch += 1
             avg_scores.append(score)
 
-        for agent in agent_list:
-            agent.close(SAVE_MODEL_PATH)
-
+        [agent.close(SAVE_MODEL_PATH) for agent in agents]
         helper.save_result(
             {"train_avg_score.txt": avg_scores},
             SAVE_RESULT_PATH
@@ -149,14 +144,14 @@ def main():
                 agent.remember(
                     states[i],
                     action,
-                    reward_list[i],
+                    rewards[i],
                     next_states[i]
                 )
                 effort_list[i] = action
 
-            next_states, reward_list, done = game.step(effort_list)
+            next_states, rewards, done = game.step(effort_list)
 
-            avg_score_seq.append(sum(reward_list) / N_AGENT)
+            avg_score_seq.append(sum(rewards) / N_AGENT)
             avg_asset_seq.append(
                 avg_asset_seq[-1] + next_states[0][3] / N_AGENT)
 
