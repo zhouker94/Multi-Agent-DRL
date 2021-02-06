@@ -13,12 +13,13 @@
     "min_epsilon": 0.1,
     "state_space": 4
   },
-  "game": {
+  "hyper_parameter": {
     "max_resource_capacity": 1000.0,
     "replenishment_rate": 0.5,
     "alpha": 0.35,
     "beta": 0.4,
-    "cost": 0.5
+    "cost": 0.5,
+    "sustainable_weight": 0.0
   },
   "model": {
     "DQN": {

@@ -14,7 +14,7 @@ import helper
 def main():
     parser = argparse.ArgumentParser()
     parsed_args = helper.build_argument_parser(parser)
-    with open('config.json', 'r') as f:
+    with open('config/config.json', 'r') as f:
         conf = json.load(f)
 
     MODEL_NAME = parsed_args.model
