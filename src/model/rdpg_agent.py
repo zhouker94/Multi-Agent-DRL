@@ -183,7 +183,7 @@ if __name__ == "__main__":
     parser.add_argument('--is_test', type=bool, default=False)
     parsed_args = parser.parse_args()
 
-    conf = json.load(open('../config.json', 'r'))
+    conf = json.load(open('../config/config.json', 'r'))
     training_conf = conf["training_config"]
 
     env_conf = conf["env_config"]

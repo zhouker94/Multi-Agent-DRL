@@ -3,30 +3,29 @@
 # @Time    : 2018/6/18 0:15
 # @Author  : Hanwei Zhu
 # @File    : agent.py
-
+import json
 
 import os
 
 import numpy as np
 
-from model import ddpg, dqn
+from model.model_factory import ModelFactory
 
 
 class Agent:
-    def __init__(self, aid, config, ckpt_path=None):
-        self._aid = aid
-        self._config = config
+    def __init__(self, uid, model_type, ckpt_path=None):
+        self._uid = uid
+
+        # Game Config
+        with open('config/config.json', 'r') as f:
+            self._config = json.load(f)
+
         self._obs = np.zeros(
             (self._config["time_steps"], self._config["state_space"])
         )
         self._step_counter = 0
 
-        if self._config["model_name"] == "DQN":
-            self._model = dqn.DQNModel(
-                self._aid, self._config, ckpt_path)
-        elif self._config["model_name"] == "DDPG":
-            self._model = ddpg.DDPGModel(
-                self._aid, self._config, ckpt_path)
+        self._model = ModelFactory(uid, self._config, ckpt_path).get_model(model_type)
 
     def learn(self):
         self._model.fit()
@@ -59,7 +58,7 @@ class Agent:
         if save_model_path:
             model_path = os.path.join(
                 save_model_path,
-                self._aid
+                self._uid
             )
 
             if not os.path.exists(model_path):

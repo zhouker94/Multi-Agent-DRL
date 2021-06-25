@@ -6,13 +6,10 @@
 # @Software: PyCharm Community Edition
 
 
-from model import base_model
-import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
-import argparse
-import json
-import os
+import tensorflow as tf
+
+from model import base_model
 
 
 class DDPGModel(base_model.BaseModel):
@@ -121,7 +118,6 @@ class DDPGModel(base_model.BaseModel):
             tf.random_normal_initializer(.0, .1), tf.constant_initializer(.1)
 
         with tf.variable_scope(scope):
-
             # batch_norm_state = tf.layers.batch_normalization(state, axis=0)
             # batch_norm_state = tf.contrib.layers.batch_norm(
             #     state, center=True, scale=True, is_training=phase)
@@ -163,44 +159,43 @@ class DDPGModel(base_model.BaseModel):
             )
 
     @staticmethod
-    def __build_critic(state, action, scope, phase, trainable=True):
+    def __build_critic(state, action, trainable=True):
         w_init = tf.random_normal_initializer(.0, .1)
         b_init = tf.constant_initializer(.1)
-        with tf.variable_scope(scope):
-            # batch_norm_state = tf.contrib.layers.batch_norm(
-            #     state, center=True, scale=True, is_training=phase,
-            #     trainable=trainable)
-            phi_state = tf.keras.layers.Dense(
-                32,
-                kernel_initializer=w_init,
-                bias_initializer=b_init,
-                trainable=trainable
-            )(state)
-            # batch_norm_action = tf.contrib.layers.batch_norm(
-            #     action, center=True, scale=True, is_training=phase,
-            #     trainable=trainable)
-            phi_action = tf.keras.layers.Dense(
-                32,
-                kernel_initializer=w_init,
-                bias_initializer=b_init,
-                trainable=trainable
-            )(action)
 
-            phi_state_action = tf.keras.layers.Dense(
-                32,
-                kernel_initializer=w_init,
-                bias_initializer=b_init,
-                trainable=trainable
-            )(tf.nn.relu(phi_state + phi_action))
+        x = tf.keras.layers.BatchNormalization()(state)
+        phi_state = tf.keras.layers.Dense(
+            32,
+            kernel_initializer=w_init,
+            bias_initializer=b_init,
+            trainable=trainable
+        )(x)
 
-            q_value = tf.keras.layers.Dense(
-                1,
-                kernel_initializer=w_init,
-                bias_initializer=b_init,
-                trainable=trainable
-            )(phi_state_action)
+        x = tf.keras.layers.BatchNormalization()(action)
+        phi_action = tf.keras.layers.Dense(
+            32,
+            kernel_initializer=w_init,
+            bias_initializer=b_init,
+            trainable=trainable
+        )(x)
 
-            return q_value
+        phi_state_action = tf.keras.layers.Dense(
+            32,
+            kernel_initializer=w_init,
+            bias_initializer=b_init,
+            trainable=trainable
+        )(tf.nn.relu(phi_state + phi_action))
+
+        q_value = tf.keras.layers.Dense(
+            1,
+            kernel_initializer=w_init,
+            bias_initializer=b_init,
+            trainable=trainable
+        )(phi_state_action)
+
+        model = tf.keras.models.Model(inputs=[state, action], outputs=q_value)
+
+        return model
 
     def save_transition(self, state, action, reward, state_next):
         transition = np.hstack((state, action, [reward], state_next))
@@ -216,12 +211,12 @@ class DDPGModel(base_model.BaseModel):
         batch = self.buffer[indices, :]
         state = batch[:, :self.config["state_space"]]
         action = batch[
-            :,
-            self.config["state_space"]: self.config["state_space"] +
-            self.config["action_space"]
-        ]
+                 :,
+                 self.config["state_space"]: self.config["state_space"] +
+                                             self.config["action_space"]
+                 ]
         reward = batch[:, -self.config["state_space"] -
-                       1: -self.config["state_space"]]
+                          1: -self.config["state_space"]]
         state_next = batch[:, -self.config["state_space"]:]
         return state, action, reward, state_next
 

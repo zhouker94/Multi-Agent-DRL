@@ -186,7 +186,7 @@ if __name__ == "__main__":
     parser.add_argument('--replenishment_rate', type=float, default=0.5)
     parsed_args = parser.parse_args()
 
-    conf = json.load(open('../config.json', 'r'))
+    conf = json.load(open('../config/config.json', 'r'))
     training_conf = conf["training_config"]
     training_conf["num_agents"] = parsed_args.n_agents
 

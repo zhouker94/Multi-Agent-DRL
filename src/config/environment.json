@@ -1,0 +1,8 @@
+{
+  "max_steps": 1000,
+  "max_resource_capacity": 1000.0,
+  "replenishment_rate": 0.5,
+  "alpha": 0.35,
+  "beta": 0.4,
+  "cost": 0.5
+}
