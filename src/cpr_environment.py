@@ -5,18 +5,7 @@
 # @File    : environment.py
 
 
-def simple_step_function(X):
-    if X > 0:
-        return 1
-    elif X == 0:
-        return 0
-    else:
-        return -1
-
-
-class CPRGame:
-    """CPR game
-    """
+class CPREnvironment:
 
     def __init__(self, conf):
         self.spec = {
@@ -34,19 +23,16 @@ class CPRGame:
 
     def harvest(self, x, N):
         return self.spec["BETA"] * (x ** self.spec["ALPHA"]) \
-            * (N ** (1 - self.spec["ALPHA"]))
+               * (N ** (1 - self.spec["ALPHA"]))
 
-    def reward(self, delta_n, pis, step_func=simple_step_function):
-        rewards = []
+    def reward(self, delta_n, pis):
+        def step_func(x): return 1 if x > 0 else -1
+
         # lambda_ -> sustainability_goal
         lambda_ = step_func(delta_n)
         # xi -> wealth_goal
-        for pi in pis:
-            xi = step_func(pi)
-            rewards.append(self.spec["W"] * lambda_ +
-                           (1 - self.spec["W"]) * xi)
-
-        return rewards
+        xis = map(step_func, pis)
+        return [self.spec["W"] * lambda_ + (1 - self.spec["W"]) * xi for xi in xis]
 
     def step(self, xs):
         # Change game status

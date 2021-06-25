@@ -8,7 +8,7 @@ import numpy as np
 
 import helper
 from agent import Agent
-from cpr_game import CPRGame
+from cpr_environment import CPREnvironment
 
 
 def main():
@@ -61,7 +61,7 @@ def main():
     )
 
     # Init game environment
-    cpr = CPRGame(conf["hyper_parameter"])
+    cpr = CPREnvironment(conf["hyper_parameter"])
     states = np.zeros((args.n_agent, env_conf["state_space"]))
     next_states = np.zeros((args.n_agent, env_conf["state_space"]))
     rewards = np.zeros(args.n_agent)
