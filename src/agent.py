@@ -6,15 +6,15 @@
 
 
 import os
-
+import uuid
 import numpy as np
 
 from model import ddpg, dqn
 
 
 class Agent:
-    def __init__(self, aid, config, ckpt_path=None):
-        self._aid = aid
+    def __init__(self, config, ckpt_path=None):
+        self._uid = str(uuid.uuid4())[:8]
         self._config = config
         self._obs = np.zeros(
             (self._config["time_steps"], self._config["state_space"])
@@ -23,10 +23,10 @@ class Agent:
 
         if self._config["model_name"] == "DQN":
             self._model = dqn.DQNModel(
-                self._aid, self._config, ckpt_path)
+                self._uid, self._config, ckpt_path)
         elif self._config["model_name"] == "DDPG":
             self._model = ddpg.DDPGModel(
-                self._aid, self._config, ckpt_path)
+                self._uid, self._config, ckpt_path)
 
     def learn(self):
         self._model.fit()
@@ -59,7 +59,7 @@ class Agent:
         if save_model_path:
             model_path = os.path.join(
                 save_model_path,
-                self._aid
+                self._uid
             )
 
             if not os.path.exists(model_path):
