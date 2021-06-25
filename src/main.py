@@ -51,9 +51,6 @@ def main():
 
     timestamp = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
 
-    if args.model not in conf["model"]:
-        raise NotImplementedError("Model Type Not Support")
-
     env_conf = conf["env"]
     save_result_path = Path(env_conf["log_path"]). \
         joinpath(f"{args.model}_model_{timestamp}_{args.sustainable_weight}_{args.n_agent}")

@@ -1,6 +1,6 @@
-# Deep Multi-agent Reinforcement Learning in a Common-Pool Resource System
+# Deep Multi-Agent Reinforcement Learning in a Common-Pool Resource System
 
-The experiment source code in the paper [Deep Multi-agent Reinforcement Learning in a Common-Pool Resource System](https://ieeexplore.ieee.org/abstract/document/8790001/). The paper is accepted and published on *IEEE CEC 2019*.
+This project includes the source code of the paper: [Deep Multi-agent Reinforcement Learning in a Common-Pool Resource System](https://ieeexplore.ieee.org/abstract/document/8790001/), which is accepted and published on *IEEE CEC 2019*.
 
 ## Introduction
 
