@@ -12,11 +12,11 @@ A demonstration of CPR system [[Hauser, Oliver P., et al.]](https://www.nature.c
 
 ## Prerequisite
 
-The demo is dockerized. So all you need is [docker](https://www.docker.com/).
+Make sure you have installed `Python` on your machine
 
 ## Run the demo
 ```
-./run_demo [MODEL] [N AGENT] [SUSTAINABLE WEIGHT] [LEARN MODE] [VERSION]
+./run_demo
 ```
 
 ## Models
