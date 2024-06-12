@@ -1,18 +1,10 @@
-# -*- coding: utf-8 -*-
-# @Time    : 2018/6/26 下午3:48
-# @Author  : Hanwei Zhu
-# @Email   : hanweiz@student.unimelb.edu.au
-# @File    : ddpg.py
-# @Software: PyCharm Community Edition
-
-
 from model import base_model
 import tensorflow as tf
 import numpy as np
-import matplotlib.pyplot as plt
-import argparse
-import json
-import os
+from tensorflow import compat as ttf
+
+tf = ttf.v1
+tf.disable_eager_execution()
 
 
 class DDPGModel(base_model.BaseModel):
@@ -121,7 +113,6 @@ class DDPGModel(base_model.BaseModel):
             tf.random_normal_initializer(.0, .1), tf.constant_initializer(.1)
 
         with tf.variable_scope(scope):
-
             # batch_norm_state = tf.layers.batch_normalization(state, axis=0)
             # batch_norm_state = tf.contrib.layers.batch_norm(
             #     state, center=True, scale=True, is_training=phase)
@@ -216,12 +207,12 @@ class DDPGModel(base_model.BaseModel):
         batch = self.buffer[indices, :]
         state = batch[:, :self.config["state_space"]]
         action = batch[
-            :,
-            self.config["state_space"]: self.config["state_space"] +
-            self.config["action_space"]
-        ]
+                 :,
+                 self.config["state_space"]: self.config["state_space"] +
+                                             self.config["action_space"]
+                 ]
         reward = batch[:, -self.config["state_space"] -
-                       1: -self.config["state_space"]]
+                          1: -self.config["state_space"]]
         state_next = batch[:, -self.config["state_space"]:]
         return state, action, reward, state_next
 

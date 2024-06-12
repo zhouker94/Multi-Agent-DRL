@@ -1,5 +1,8 @@
-import tensorflow as tf
+from tensorflow import compat as ttf
 from abc import abstractmethod
+
+tf = ttf.v1
+tf.disable_eager_execution()
 
 
 class BaseModel(object):

@@ -1,17 +1,10 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# @Time    : 2018/4/25 15:09
-# @Author  : Hanwei Zhu
-# @File    : dqn.py
-
-import argparse
-import matplotlib.pyplot as plt
-import json
 import numpy as np
-import tensorflow as tf
+from tensorflow import compat as ttf
 from model import base_model
 import random
-import os
+
+tf = ttf.v1
+tf.disable_eager_execution()
 
 
 class DQNModel(base_model.BaseModel):
@@ -130,7 +123,7 @@ class DQNModel(base_model.BaseModel):
                 # size of q_value_real is [BATCH_SIZE, 1]
                 q_value_max = tf.reduce_max(self.q_values_target, axis=1)
                 q_value_real = self._reward + \
-                    self.config["gamma"] * q_value_max
+                               self.config["gamma"] * q_value_max
                 self.q_value_real = tf.stop_gradient(q_value_real)
 
         with tf.variable_scope('loss'):
