@@ -7,7 +7,6 @@
     "total_init_effort": 300,
     "total_max_effort": 500,
     "total_min_effort": 100,
-    "log_path": "log",
     "init_epsilon": 1.0,
     "epsilon_decay": 0.1,
     "min_epsilon": 0.1,

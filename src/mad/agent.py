@@ -9,7 +9,7 @@ import os
 import uuid
 import numpy as np
 
-from model import ddpg, dqn
+from .model import ddpg, dqn
 
 
 class Agent:

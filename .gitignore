@@ -9,3 +9,5 @@ venv3/*
 venv
 *.iml
 log
+*.egg-info/
+build/
